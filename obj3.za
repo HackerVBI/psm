@@ -1,0 +1,2348 @@
+
+PL_VARS         DEFS    36
+MARK_CHAN       DEFB    0
+MARK_PAT        DEFB    255
+MARKSTP_ST      DEFB    255
+MARKSTP_EN      DEFB    255
+SCRLTOP         DEFW    0
+POSITION        DEFB    0
+NLIN            DEFB    0
+SCRLBOTT        DEFW    0
+MASK_A          DEFB    255
+MASK_B          DEFB    255
+MASK_C          DEFB    255
+OCTAVE          DEFB    4
+MOD_OCTAVE      DEFB    0
+MARKDATA        DEFB    255
+CTYPE           DEFB    255
+CMODE           DEFB    0
+SMP_PREVIEW     DEFB    0
+NOTTAB          DEFB    9,11,0,2,4,5,7
+CHANNEL         DEFB    1
+COLUMN          DEFB    0
+COOR_INV        DEFB    0
+SAMPDAT         DEFB    #F0,0,0,0,#F0,0,0,0,#32,#0F,#11,0 ;#F0,0,#F0,0,#F32,#11
+NUMDAT          DEFS    3
+SCRCOOR         DEFB    0
+MARKCHAN        DEFB    0
+
+USKOR_INIT      LD      A,2
+                LD      (POS_USKOR+2),A
+                LD      A,8
+                LD      (USK_O2+1),A
+                RET
+POS_USKOR       HALT
+                LD      A,1
+                DEC     A
+                JR      NZ,PR_MARK-4
+USK_O2          LD      A,1
+                DEC     A
+                RET     Z
+                LD      (POS_USKOR+2),A
+                LD      (USK_O2+1),A
+                XOR     A
+                RET
+;
+                LD      (POS_USKOR+2),A
+                RET
+PR_MARK
+                XOR     A
+                LD      (COOR_INV),A
+                LD      (PR_NUMP+1),A
+
+                LD      DE,#4AE3
+                LD      HL,PATTEXT
+                LD      B,8
+                CALL    _PRIN_STR
+                LD      HL,MARK_PAT
+                CALL    PRMK_J0
+                INC     E
+                LD      HL,CHANTX
+                LD      B,8
+                CALL    _PRIN_STR
+                LD      A,(MARKSTP_ST)
+                LD      HL,NOTEXT_
+                INC     A
+                JR      Z,PRMK_J1
+                LD      A,(MARK_CHAN)
+                ADD     A,"A"
+                LD      HL,STRING
+                LD      (HL),A
+PRMK_J1         CALL    _PRCH_1
+                INC     E
+                LD      HL,MARKSTP_ST
+                CALL    PRMK_J0
+                LD      HL,TOTX
+                CALL    PR_COORD-5
+                LD      HL,MARKSTP_EN
+PRMK_J0         LD      A,(HL)
+                CP      255
+                JP      NZ,PR_NUMM2
+                LD      HL,NOTEXT_
+                LD      B,2
+                JP      _PRIN_STR
+PR_COORD        XOR     A
+                LD      (PR_NUMP+1),A
+                LD      (PR_NUMI+1),A
+                LD      A,(POSITION)
+                AND     #7F
+                PUSH    AF
+                LD      DE,#410C
+                CALL    PR_NUM3
+                POP     AF
+                CALL    _F_POSAD
+                PUSH    DE
+                EX      AF,AF'
+                LD      A,E
+                LD      (PR_NUMI+1),A
+                EX      AF,AF'
+                LD      DE,#414C
+                CALL    PR_NUM3N
+                POP     DE
+                PUSH    DE
+                LD      A,E
+                LD      DE,#412C
+                CALL    PR_NUM3
+                POP     DE
+                LD      D,0
+                LD      HL,PATDAT
+                ADD     HL,DE
+                ADD     HL,DE
+                PUSH    HL
+                LD      A,(HL)
+                LD      DE,#416C
+                CALL    PR_NUM3
+                POP     HL
+                INC     HL
+                LD      A,(HL)
+                LD      DE,#4184
+                CALL    PR_NUM2
+                LD      A,(NLIN)
+                LD      DE,#418C
+PR_NUM3
+;A-NUMBER DE-SCREEN
+                LD      L,A
+                LD      H,0
+                LD      IX,STRING
+                LD      BC,100
+                CALL    _DECIM
+PR_NUMM
+                LD      BC,10
+                CALL    _DECIM
+                LD      A,L
+                ADD     A,#30
+                LD      (IX),A
+                LD      HL,STRING
+PR_NUMO         LD      B,3
+PR_NUMP         LD      A,1
+                INC     A
+                LD      (PR_NUMP+1),A
+                LD      C,A
+                LD      A,(COOR_INV)
+                CP      C
+                JR      NZ,PR_NUMI
+                LD      A,#2F ;cpl
+                LD      (PRCH_O1),A
+PR_NUMI         LD      A,0
+                INC     A
+                JR      Z,$+10
+PR_NYP          CALL    _PRIN_STR
+                XOR     A     ;nop
+                LD      (PRCH_O1),A
+                RET
+                LD      HL,NOTEXT_
+                JR      $-11
+PR_NUM3N
+;A-NUMBER DE-SCREEN
+                LD      IX,STRING
+                BIT     7,A
+                LD      B,"+"
+                JR      Z,$+6
+                NEG
+                LD      B,"-"
+                LD      (IX),B
+                INC     IX
+                LD      L,A
+                LD      H,0
+                JR      PR_NUMM
+PR_NUMM2        LD      L,A
+                XOR     A
+                LD      (PR_NUMI+1),A
+                LD      A,L
+PR_NUM2         LD      L,A
+                LD      H,0
+                LD      IX,STRING
+                LD      A,2
+                LD      (PR_NUMO+1),A
+                CALL    PR_NUMM
+                LD      A,3
+                LD      (PR_NUMO+1),A
+                RET
+SCRN_INIT
+                XOR     A
+                LD      (SMP_PREVIEW),A
+                LD      (COOR_INV),A
+                CALL    SCRL_INIT
+                CALL    PR_COORD
+                CALL    PR_CHAN
+                CALL    PR_TYPE
+                CALL    PR_MODE
+                CALL    PR_OCT
+                JP      PR_MODOCT
+SCRL_INIT
+                LD      A,(MARKDATA)
+                INC     A
+                CALL    Z,PR_MARK
+                LD      HL,(POSITION)
+                LD      DE,#4920
+                CALL    PRSCL_UP
+                LD      DE,#4900
+                CALL    PRSCL_UP
+                LD      DE,#41E0
+                CALL    PRSCL_UP
+                LD      DE,#41C0
+                CALL    PRSCL_UP
+                LD      (SCRLTOP),HL
+
+                LD      HL,(POSITION)
+                LD      DE,#4940
+                CALL    PRS_OOP2
+                LD      DE,#4960
+                CALL    PRSCL_DOWN
+                LD      DE,#4980
+                CALL    PRSCL_DOWN
+                LD      DE,#49A0
+                CALL    PRSCL_DOWN
+                CALL    LINE_NEXT;MOVE_DOWN
+                LD      (SCRLBOTT),HL
+                LD      DE,#49C0
+PR_STRING
+;DE-ADRESS
+;H-LINE L-POSITION
+                PUSH    HL
+                CALL    MAKE_STRING
+                POP     HL
+                CALL    CP_MARK
+                PUSH    HL
+                PUSH    DE
+                LD      A,(POSITION)
+                AND     #7F
+                CALL    _F_POSAD
+                LD      A,E
+                POP     DE
+                POP     HL
+                ADD     A,1
+PRIN_STRING
+                JR      NC,.j1
+                LD      A,#AF ;xor a
+                LD      (PRCH_O1),A
+.j1
+                LD      HL,STRING
+                CALL    _PRCH_1
+                CALL    _PRCH_1
+                LD      B,3
+.loop
+                LD      A,(MARKCHAN)
+                CP      B
+                JR      NZ,.j2
+                LD      A,(PRCH_O1)
+                CP      #AF   ;xor a?
+                JR      Z,.j2
+                LD      A,#2F ;cpl
+                LD      (PRCH_O1),A
+.j2
+                INC     E
+                CALL    _PRCH_1
+                CALL    _PRCH_1
+                CALL    _PRCH_1
+                INC     E
+                CALL    _PRCH_1
+                CALL    _PRCH_1
+                CALL    _PRCH_1
+                CALL    _PRCH_1
+                CALL    _PRCH_1
+                LD      A,(PRCH_O1)
+                CP      #AF   ;xor a?
+                JR      Z,.j3
+                XOR     A     ;nop
+                LD      (PRCH_O1),A
+.j3
+                DJNZ    .loop
+                XOR     A     ;nop
+                LD      (PRCH_O1),A
+                RET
+
+PRSCL_UP        PUSH    DE
+                CALL    LINE_PREV;MOVE_UP
+                JR      PRS_OOP2-1
+PRSCL_DOWN      PUSH    DE
+                CALL    LINE_NEXT;MOVE_DOWN
+                POP     DE
+PRS_OOP2        PUSH    HL
+                CALL    PR_STRING
+                POP     HL
+                RET
+CP_MARK
+;H-LINE L-POSITION
+                PUSH    DE
+                PUSH    HL
+                LD      A,L
+                AND     #7F
+                CALL    _F_POSAD
+                LD      C,E
+                POP     HL
+                POP     DE
+                LD      A,(MARK_PAT)
+                CP      C
+                JR      NZ,CPMR_L1
+                LD      A,(MARKSTP_ST)
+                INC     H
+                CP      H
+                DEC     H
+                JR      NC,CPMR_L1
+                LD      A,(MARKSTP_EN)
+                CP      255
+                RET     Z
+                CP      H
+                JR      C,CPMR_L1
+                LD      A,(MARK_CHAN)
+                XOR     3
+                JR      $+3
+CPMR_L1         XOR     A
+                LD      (MARKCHAN),A
+                RET
+MAKE_STRING
+;H-LINE L-POSITION
+                PUSH    DE
+                LD      C,H
+                LD      A,L
+                AND     #7F
+                PUSH    BC
+                CALL    _F_PATAD
+                PUSH    IX
+                POP     HL
+                POP     DE
+                LD      B,E
+                CALL    MAKE_STR
+                POP     DE
+                RET
+
+;Finds next play line
+;H-Line L-Position
+;MOVE_DOWN
+LINE_NEXT
+                INC     H
+                LD      A,L
+                PUSH    HL
+                CALL    _F_POSAD
+                LD      D,0
+                LD      HL,PATDAT
+                ADD     HL,DE
+                ADD     HL,DE
+                LD      A,(HL) ;pattern size
+                POP     HL
+                DEC     A
+                CP      H
+                RET     NC     ;inside pattern
+
+                LD      H,0    
+                LD      A,(CTYPE) ;pattern/compose
+                AND     A
+                RET     Z         ;quit if pattern mode
+                PUSH    HL
+                LD      DE,POSADR
+                LD      A,L
+                LD      B,L ;current pos
+                ADD     A,A
+                LD      L,A
+                LD      H,0
+                ADD     HL,DE
+                LD      C,100 ;full circle
+.l1             INC     HL
+                INC     HL
+                INC     B
+                LD      A,B
+                CP      100
+                JR      NZ,.j1
+                LD      B,0 ;wrap around
+                LD      HL,POSADR
+.j1
+                DEC     C
+                JR      Z,.leave
+                LD      A,(HL)
+                INC     A
+                JP      Z,.l1 ;less ticks
+
+.leave          POP     HL
+                LD      L,B
+                RET
+
+;Finds prev play line
+;H-Line L-Position
+;MOVE_UP
+LINE_PREV
+                DEC     H
+                RET     P
+                LD      A,(CTYPE)
+                AND     A
+                LD      A,L
+                JR      Z,.j2 ;pattern mode
+                PUSH    HL
+                LD      DE,POSADR
+                LD      B,L
+                ADD     A,A
+                LD      L,A
+                LD      H,0
+                ADD     HL,DE
+                LD      C,100 ;full circle
+
+.l1             DEC     HL
+                DEC     HL
+                DEC     B
+                JP      P,.j1
+                LD      B,99
+                LD      HL,POSADR+198 ;end of list
+.j1
+                DEC     C
+                JR      Z,.leave
+                LD      A,(HL)
+                INC     A
+                JP      Z,.l1 ;less ticks
+.leave
+                POP     HL
+                LD      L,B
+                LD      A,B
+.j2             PUSH    HL
+                CALL    _F_POSAD
+                LD      D,0
+                LD      HL,PATDAT
+                ADD     HL,DE
+                ADD     HL,DE
+                LD      A,(HL) ;pattern size
+                POP     HL
+                DEC     A
+                LD      H,A
+                RET
+
+MAKE_STR
+;HL-ADRESS OF LINE
+;B-POSIT (0-63)
+                PUSH    HL
+                LD      IX,STRING
+                LD      L,B
+                LD      H,0
+                LD      BC,10
+                CALL    _DECIM
+                LD      A,L
+                ADD     A,#30
+                LD      (IX),A
+                PUSH    IX
+                POP     DE
+                INC     DE
+                POP     HL
+                LD      B,3
+PR_CHL1
+                LD      A,(HL)
+                BIT     7,A
+                JR      NZ,M_NOTE_1
+                LD      C,A
+                AND     #70
+                JR      Z,M_NOTE_0
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                ADD     A,"A"-1
+                LD      (DE),A
+                INC     DE
+                BIT     3,C
+                LD      A,"#"
+                JR      NZ,PR_CHJ1
+                LD      A,"-"
+PR_CHJ1         LD      (DE),A
+                INC     DE
+                LD      A,C
+                AND     7
+                ADD     A,"1"
+                LD      (DE),A
+                INC     DE
+PR_NX
+                INC     HL
+                LD      A,(HL)
+                CP      0
+                JR      NZ,.volnot0
+                LD      A,132 ;no volume
+                LD      (DE),A
+                INC     DE
+                JR      .vol0
+.volnot0        CALL    POKE_HEXL
+.vol0           INC     HL
+                CALL    POKE_HEX
+
+                DEC     DE
+                DEC     DE
+                LD      A,(DE)
+                CP      "0"
+                JR      NZ,.samp0
+                LD      A,132 ;no sample
+                LD      (DE),A
+.samp0          INC     DE
+                LD      A,(DE)
+                CP      "0"
+                JR      NZ,.spec0
+                LD      A,132 ;no special (orn/env)
+                LD      (DE),A
+                INC     DE
+                CALL    POKE_HEX2
+                JR      .next
+.spec0
+                INC     DE
+                CALL    POKE_HEX
+.next
+                DJNZ    PR_CHL1
+                RET
+M_NOTE_0
+                LD      A,132;,"-"
+                JR      M_NOTE_J1
+M_NOTE_1        LD      A,"R"
+M_NOTE_J1       LD      (DE),A
+                INC     DE
+                LD      A,132;"-"
+                LD      (DE),A
+                INC     DE
+                LD      (DE),A
+                INC     DE
+                JP      PR_NX
+POKE_HEX
+; (HL)= value -> (DE)- Hex representation
+                LD      A,(HL)
+                INC     HL
+                LD      C,A
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                CALL    POKE_HEXL
+POKE_HEXJ1      LD      A,C
+POKE_HEXL       AND     #0F
+                CP      #0A
+                JR      C,.j1
+                ADD     A,7
+.j1
+                ADD     A,"0"
+                LD      (DE),A
+                INC     DE
+                RET
+POKE_HEX2
+; (HL)= value -> (DE)- Hex representation (. instead of 0)
+                LD      A,(HL)
+                INC     HL
+                LD      C,A
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                CALL    POKE_HEX2L
+                CP      132
+                JR      NZ,POKE_HEXJ1
+                LD      A,C
+POKE_HEX2L      AND     #0F
+                CP      #0A
+                JR      C,.j1
+                ADD     A,7
+.j1             AND     A
+                JR      NZ,.j2
+                LD      A,132
+                JR      .j3
+.j2             ADD     A,"0"
+.j3             LD      (DE),A
+                INC     DE
+                RET
+
+PLAY_NINITX
+                LD      IX,SAMPDAT+8
+                JR      PLAY_NINL1
+PLAY_NINIT
+                LD      A,(NLIN)
+                LD      C,A
+                LD      A,(POSITION)
+                CALL    _F_PATAD
+                LD      DE,8
+                ADD     IX,DE
+                LD      B,A
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                LD      A,B
+                JR      Z,$+3
+PLAY_NINL1      XOR     A
+;
+                LD      (HEIGH),A
+                PUSH    IY
+                LD      IY,PL_VARS+24
+                LD      A,3
+INIT_L0         EX      AF,AF'
+                LD      A,(IX+0)
+                LD      (INIU_O2+1),A
+                LD      C,A
+                LD      D,0
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                AND     15
+                JP      Z,ININ_J1
+                CP      15
+                JP      Z,INIR_J1
+                LD      E,A
+                LD      HL,NOTTAB-1
+                ADD     HL,DE
+                LD      A,(HL)
+                BIT     3,C
+                JR      Z,$+3
+                INC     A
+                LD      (INIU_O1+1),A
+                LD      B,A
+                LD      A,C
+                AND     7
+                ADD     A,A
+                ADD     A,A
+                LD      C,A
+                ADD     A,A
+                ADD     A,C
+                ADD     A,B
+                ADD     A,0
+HEIGH           EQU     $-1
+                LD      (IY+7),A
+                XOR     A
+                LD      (IY+9),A
+                LD      (IY+8),A
+                LD      (IY+2),A
+                INC     A
+                LD      (IY+10),A
+                LD      A,(IY+5)
+                AND     #E0
+                LD      (IY+5),A
+
+                LD      A,(IX+2)
+                LD      C,A
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                AND     15
+                JR      Z,$+11
+                CALL    _F_SAMPAD
+                LD      (IY+0),E
+                LD      (IY+1),D
+
+                LD      A,C
+                AND     15
+                JR      Z,INIR_J1+6
+                CP      8
+                JR      C,INIR_J1-6
+                CP      15
+                LD      A,(IX+3)
+                JR      Z,INIT_J2
+
+                SET     6,(IY+5)
+                CALL    DIVIN
+                JR      ININ_J2
+INIT_J2         AND     31
+                CALL    _F_ORNAD
+                LD      (IY+3),E
+                LD      (IY+4),D
+                LD      (IY+5),0
+                JR      ININ_J2
+                LD      (IY+5),#A0
+                JR      ININ_J2
+INIR_J1         SET     7,(IY+2)
+                JR      ININ_J2
+                BIT     7,(IY+5)
+                JR      NZ,ININ_J2
+                RES     5,(IY+5)
+ININ_J2
+                LD      A,(IY+11)
+                INC     A
+                JR      NZ,ININ_JJ
+                LD      A,(IX)
+                AND     A
+                JR      Z,$+21
+                LD      A,(IX+1)
+                AND     A
+                JR      Z,$+15
+                LD      B,(IX+2)
+                LD      A,B
+                AND     #F0
+                JR      Z,$+7
+                LD      A,B
+                AND     #0F
+                JR      NZ,ININ_JJ
+
+                LD      (IY+2),#80
+                LD      (IY+6),0
+                JR      ININ_J1
+ININ_JJ
+                LD      A,(IX+1)
+                AND     A
+                JR      Z,$+7
+                LD      (IY+11),A
+                JR      $+5
+                LD      A,(IY+11)
+                LD      (IY+6),A
+ININ_J1
+                LD      DE,0-12
+                ADD     IY,DE
+                LD      E,0-4
+                ADD     IX,DE
+                EX      AF,AF'
+                DEC     A
+                JP      NZ,INIT_L0
+                POP     IY
+                RET
+DIVIN
+                CP      #F1
+                JR      C,$+8
+                AND     15
+                LD      B,A
+                XOR     A
+                JR      INIU_J1
+
+                BIT     0,C
+                JR      NZ,INIU_J1
+
+                LD      B,A
+INIU_O1         LD      A,0
+                ADD     A,A
+                LD      E,A
+                LD      D,0
+                LD      HL,TABDIV+168
+                ADD     HL,DE
+                LD      DE,0-24
+                LD      A,B
+                LD      B,4
+;UFO
+                CP      (HL)
+                JR      Z,$+7
+                ADD     HL,DE
+                DJNZ    $-4
+                JR      INIU_J1
+
+INIU_O2         LD      A,0
+                LD      E,A
+                SUB     B
+                CPL
+                AND     3
+                LD      (DIVM_OC+1),A
+                LD      A,E
+                CALL    DIV_MODUL
+                LD      B,0
+INIU_J1
+                LD      HL,AY_B
+                LD      (HL),A
+                INC     HL
+                LD      (HL),B
+                INC     HL
+                LD      (HL),C
+                RET
+PLAY_TICK
+                XOR     A
+                LD      (AY_7),A
+                LD      A,2
+                LD      (PLA_O1+1),A
+                LD      IX,PL_VARS+24
+PLA_LL          LD      L,(IX+3) ;orn adr
+                LD      H,(IX+4)
+                PUSH    HL         ;;;;;;;;;;;;;;;;;;;; push ornament adr
+                LD      E,(IX+5) ;orn tick
+ANOP            LD      D,0
+                INC     HL
+                INC     HL
+                LD      A,E
+                AND     96       ;mod+end
+                LD      A,E
+                JR      Z,$+6
+                LD      HL,ANOP+1
+                XOR     A
+                AND     31
+                LD      E,A
+                ADD     HL,DE
+                LD      A,(HL)
+                ADD     A,(IX+7) ;note
+                CP      96
+                JR      C,$+9
+                AND     128
+                LD      A,95
+                JR      Z,$+3
+                XOR     A
+
+                ADD     A,A
+                LD      E,A
+                LD      HL,TABDIV
+                ADD     HL,DE
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+                LD      L,(IX+0) ;samp adr
+                LD      H,(IX+1)
+                PUSH    HL           ;;;;;;;;;;;;;;;; push sample adr
+                PUSH    DE           ;;;;;;;;;;;;;;;; push note dif
+                LD      A,(IX+2) ;samp tick
+                LD      D,0
+                INC     HL
+                INC     HL
+                LD      E,A
+                ADD     A,A
+                ADD     A,E
+                LD      E,A
+                ADD     HL,DE
+                LD      C,(HL)  ;mixer + volume
+                INC     HL
+                LD      B,(HL)  ;noise + high shift
+                INC     HL
+                LD      E,(HL)  ;low shift
+                LD      A,B
+                AND     7
+                BIT     2,B     ;shift sign
+                JR      Z,$+4
+                OR      #F8     ;make neg 11111000
+
+                LD      D,A
+                LD      L,(IX+8) ;tone move
+                LD      H,(IX+9)
+                ADD     HL,DE
+                LD      (IX+8),L ;accumulate
+                LD      (IX+9),H
+                POP     DE
+                ADD     HL,DE
+                LD      A,H
+                CP      16
+                JR      C,$+12
+                AND     128
+                LD      HL,4095
+                JR      Z,$+5
+                LD      HL,0     ;clamp div
+
+                PUSH    HL       ;;;;;;;;;;;;;;;;;;;;;;;;;;push tone
+                LD      A,C      ;tick mixer + tick volume
+                AND     15
+                BIT     6,(IX+5) ;envelope flag
+                JR      Z,$+4
+                OR      16
+
+                ADD     A,(IX+6) ;sample volume
+                SUB     15       
+                JR      C,$+8
+                BIT     7,(IX+2) ;sample end flag
+                JR      Z,$+3
+                XOR     A
+
+                LD      D,A       ;volume
+                LD      HL,AY_0+6 ;noise reg
+                LD      A,C       
+                AND     #90       ;tick mixer
+                BIT     7,(IX+2)  ;sample end
+                JR      Z,$+4
+                OR      #80
+
+                LD      E,A       
+                AND     #80
+                JR      NZ,PLA_J1
+                LD      A,D
+                AND     A         
+                JR      Z,PLA_J1  ;zero volume
+                LD      A,B       
+                AND     #F8
+                RRCA
+                RRCA
+                RRCA              ;tick noise
+                LD      (HL),A
+PLA_J1          LD      A,(PLA_O1+1) ;channel
+                XOR     3            ;210 -> 123
+                LD      B,A
+                LD      A,E       ;mixer
+                RRCA
+
+                RRCA
+                DJNZ    $-1
+                INC     HL
+                OR      (HL)      ;merge mixer flags
+                LD      (HL),A
+
+                LD      A,D       ;volume
+                INC     HL        ;volume registers
+PLA_O1          LD      DE,0
+                ADD     HL,DE
+                LD      (HL),A
+                LD      HL,AY_0
+                ADD     HL,DE
+                ADD     HL,DE
+                POP     DE       ;;;;;;;;;;;;;;;;;;;;; pop tone
+                LD      (HL),E
+                INC     HL
+                LD      (HL),D
+                POP     HL       ;;;;;;;;;;;;;;;;;;; pop sample adr
+                LD      A,(IX+2) ;sample tick
+                LD      E,A
+                AND     31
+                LD      C,A      
+                LD      B,(HL)   ;sample size
+                LD      A,B
+                AND     31
+                INC     C
+                CP      C
+                JR      NC,SMP_J1 ;still inside
+                INC     HL
+                LD      D,(HL)
+                LD      A,D
+                AND     #E0
+                LD      A,D
+                JR      NZ,$+7
+                SET     7,E
+                JP      SMP_J1
+
+                AND     31
+                LD      C,A
+                DEC     (IX+10)   ;loop delay counter
+                JR      NZ,SMP_J1
+                LD      A,D
+                RLCA
+                RLCA
+                RLCA
+                AND     7
+                LD      (IX+10),A ;initialize loop delay
+                LD      A,B
+                RLCA
+                RLCA
+                AND     3
+                LD      D,A
+                BIT     5,B
+                LD      A,(IX+6)  ;volume
+                JR      Z,$+10
+                INC     D
+                SUB     D
+                JR      NC,SMP_J1-3
+                XOR     A
+                JP      SMP_J1-3
+
+                ADD     A,D
+                CP      16
+                JR      C,SMP_J1-3
+                LD      A,15
+                LD      (IX+6),A   ;volume
+SMP_J1          LD      A,C
+                XOR     E
+                AND     31
+                XOR     E
+                LD      (IX+2),A   ;sample tick
+                POP     HL         ;;;;;;;;;;;;;;;;;;;;;; pop ornament adr
+                LD      A,(IX+5)   ;ornament tick
+                LD      E,A
+                AND     31
+                CP      (HL)       ;ornament size
+                INC     A
+                JR      C,$+10
+                INC     HL
+                LD      A,(HL)
+                AND     A
+                JP      M,$+5
+                SET     5,E        ;stop ornament
+
+                XOR     E
+                AND     31
+                XOR     E
+                LD      (IX+5),A   ;update ornament tick
+                LD      DE,0-12
+                ADD     IX,DE
+                LD      HL,PLA_O1+1 ;next channel
+                DEC     (HL)
+                JP      P,PLA_LL
+                RET
+
+;EQ_VALS         DEFS    3*5 ;n/+0 a/+3 b/+6 c/+9 e/+12
+
+EQ
+	ld	a,7    ;;;
+	out	(254),a
+;                LD      HL,EQ_VALS
+;                LD      C,5
+;clearing
+.clearing       EQU     $+1
+                LD      HL,0 ;.clearing+0
+                CALL    QZ_NO_ER
+                LD      HL,0      ;+6 for each
+                CALL    QZ_NO_ER
+                LD      HL,0
+                CALL    QZ_NO_ER
+                LD      HL,0
+                CALL    QZ_NO_ER
+                LD      HL,0
+                CALL    QZ_NO_ER
+;.l1
+;                LD      E,(HL) 
+;                INC     HL
+;                LD      D,(HL) ;de=addr
+;                INC     HL
+;                LD      A,(HL) ;a=height
+;                INC     HL
+;                CALL    QZ_NO_ER
+;                DEC     C
+;                JR      NZ,.l1
+	ld	a,3    ;;;
+	out	(254),a
+
+;                LD      IX,EQ_VALS
+  ld a,255
+  ld (PREQSC.o2),a ;vibrating tail
+                LD      IX,EQBITMAP
+;figuring noise volume
+                LD      B,0 ;default 0
+                LD      A,7
+                CALL    PICK_AYREG
+                LD      E,A
+                BIT     3,E  ;noise a
+                JR      NZ,.j1
+                LD      A,8
+                CALL    PICK_AYREG
+                LD      B,A
+.j1
+                BIT     4,E  ;noise b
+                JR      NZ,.j2
+                LD      A,9
+                CALL    PICK_AYREG
+                CP      B
+                JR      C,.j2
+                LD      B,A
+.j2
+                BIT     5,E  ;noise c
+                JR      NZ,.j3
+                LD      A,10
+                CALL    PICK_AYREG
+                CP      B
+                JR      C,.j3
+                LD      B,A
+.j3 ;noise freq
+                LD      A,6   ;noise freq
+                CALL    PICK_AYREG 
+                CPL
+                AND     31
+                LD      C,A
+                LD      A,B
+                CP      16     ;noise +env
+                JR      C,.j4
+                LD      A,10
+.j4             AND     15
+                LD      B,A
+                LD      DE,#578C; bottom of noise
+                LD      HL,.clearing
+                CALL    PREQSC ;c=x b=size
+
+	ld	a,4    ;;;
+	out	(254),a
+
+                LD      A,8
+                CALL    PICK_AYREG
+                LD      B,A
+                LD      A,9
+                CALL    PICK_AYREG
+                OR      B
+                LD      B,A
+                LD      A,10
+                CALL    PICK_AYREG
+                OR      B
+                AND     16
+                LD      B,0
+                JR      Z,.j5 ;if there's an env
+                LD      B,16 ;env
+.j5
+
+                LD      A,11
+                CALL    PICK_AYREG
+                RLCA
+                RLCA
+                RLCA
+                RLCA
+                LD      E,A
+                AND     #0F
+                LD      D,A
+                LD      A,#F0
+                AND     E
+                LD      E,A
+                CALL    DIV_NOT2
+                LD      C,A
+                LD      DE,#57E4 ;bottom line of tone
+                LD      HL,.clearing+6
+                CALL    PREQSC
+
+                LD      A,7 ;mixer
+                CALL    PICK_AYREG
+                AND     7
+                LD      (.tonemix),A
+
+                LD      HL,#2100 ;#21 because carry stop
+                LD      DE,.clearing+12
+.loop
+                PUSH    HL
+                PUSH    DE
+                LD      A,L ;chan #
+                ADD     A,A
+                LD      C,A
+                CALL    PICK_AYREG
+                LD      E,A
+                INC     C
+                LD      A,C
+                CALL    PICK_AYREG
+                LD      D,A     ;de=tone div
+                CALL    DIV_NOT2
+                LD      C,A     ;note
+                LD      A,0
+.tonemix        EQU     $-1
+                AND     H
+                LD      A,0 ;zero volume of no mixer tone
+                JR      NZ,.j7
+                LD      A,L
+                ADD     A,8
+                CALL    PICK_AYREG
+                CP      16
+                JR      C,.j7
+                LD      A,10 ;env+tone
+.j7             LD      B,A     ;volume
+                LD      HL,#57E4 ; bottom line of tone
+                POP     DE
+                EX      DE,HL
+                CALL    PREQSC
+                EX      DE,HL
+                INC     DE
+                INC     DE
+                INC     DE
+                INC     DE
+                INC     DE
+                POP     HL
+                INC     L
+                SLA     H
+                JP      NC,.loop
+
+	ld	a,(BORD_COL)    ;;;
+	out	(254),a
+
+                RET
+DIV_NOT2
+    push bc
+	push hl     
+
+    ld a,d
+    cp 16 
+    ld a,0
+    jr nc,.dn ;out of range
+
+;	ld hl,#f000 ;table
+;	add hl,de
+;	ld a,(hl) ;note
+                CALL    DIV_NOT
+	ld (.rs),a
+	push de
+	pop bc
+
+    add a,a
+    ld e,a
+    ld d,0  
+    ld hl,tabdiv
+    add hl,de
+    ld a,(hl)
+    inc hl
+    ld h,(hl)
+    ld l,a
+    ;hl=central div; bc=cur div
+    and a
+    sbc hl,bc
+    jr c,.s1 ;less
+    ld a,h
+    or l
+    jr z,.s2 ;equal
+    ld a,#55 ;more
+    jp .dn
+.s1 ld a,#aa
+    jp .dn
+.s2 ld a,#ff 
+.dn
+    ld (PREQSC.o2),a ;vibrating tail
+.rs equ $+1
+    ld a,0
+	pop hl
+	pop bc
+	ret
+
+DIV_NOT_INIT
+	ret
+	ld hl,#f000
+	ld de,0
+	ld bc,4096
+.l1	push de
+	call div_not
+	pop de
+	ld (hl),a
+	inc de
+	inc hl
+	dec bc
+	ld a,c
+	or b
+	jr nz,.l1
+	ret
+
+DIV_NOT
+	ld	a,5    ;;;
+	out	(254),a
+	            PUSH    DE
+                PUSH    HL
+                PUSH    BC
+                LD      (TNN_O1+1),DE
+                LD      (TNN_O2+1),DE
+                LD      A,255
+                LD      (TNN_O3+2),A
+
+                LD      BC,#0530 ; 30 18 0C 06 03
+                LD      A,C
+DIV_NOT_L1
+                LD      E,A
+                SLA     E
+                LD      D,0
+                LD      HL,TABDIV
+                ADD     HL,DE
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+TNN_O1          LD      HL,0 ; searched value
+                AND     A
+                SBC     HL,DE
+                JR      C,DIV_NOT_J1
+                SRL     C
+                SBC     A,C
+                DJNZ    DIV_NOT_L1
+                JP      DIV_NOT_J2
+
+DIV_NOT_J1      SRL     C
+                ADD     A,C
+                DJNZ    DIV_NOT_L1
+
+DIV_NOT_J2
+                DEC     A ;take a bit to the left
+                LD      B,4
+
+DIV_NOT_J4      LD      E,A
+                SLA     E
+                LD      D,0
+                LD      HL,TABDIV
+                ADD     HL,DE
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+
+TNN_O2          LD      HL,0
+                AND     A
+                SBC     HL,DE
+                JR      NC,TNN_O3
+                EX      DE,HL
+                LD      HL,0
+                AND     A
+                SBC     HL,DE
+
+TNN_O3          LD      DE,0
+                AND     A
+                SBC     HL,DE
+                JR      NC,TNN_NOT_J3 
+                ADD     HL,DE
+                LD      (TNN_O3+1),HL
+                LD      C,A
+
+TNN_NOT_J3      INC     A
+                DJNZ    DIV_NOT_J4
+
+	ld	a,0    ;;;
+	out	(254),a
+
+                LD      A,C
+                POP     BC
+                POP     HL
+                POP     DE
+
+                RET
+
+PICK_AYREG ;a=port
+	push hl
+	push bc
+	ld hl,AY_0
+	ld b,0
+	ld c,a
+	add hl,bc
+	ld a,(hl)
+	pop bc
+	pop hl
+	ret
+;                PUSH    BC
+;                LD      BC,#FFFD
+;                OUT     (C),A
+;                IN      A,(C)
+;                POP     BC
+                RET
+
+EQBITMAP        DEFB    #C0,#30,#0C,#03
+
+;draw and store for erasing: de= address, b=height, c=column
+PREQSC
+
+push af
+	ld a,6
+	out	(254),a
+pop af
+	call .sub
+push af
+    ld a,0
+	out	(254),a
+pop af
+	ret
+.sub
+                LD      A,C
+                SRL     A
+                SRL     A
+                ADD     A,E
+                LD      E,A
+                LD      (HL),E
+                INC     HL
+                LD      (HL),D ;addr
+
+                LD      A,B
+                CP      16
+                JR      Z,.j1
+                AND     15
+                RET     Z
+                dec a
+                LD      B,A
+.j1
+                LD      A,C
+                AND     3
+                LD      (.o1+2),A
+.o1             LD      C,(IX+0) ;offset
+                EX      DE,HL
+                LD      A,B
+                CP      16
+                JR      Z,.j_check
+                and     a
+                jr      z,.final
+.l_norm         LD      A,C
+                OR      (HL)
+                LD      (HL),A
+;upline
+                LD      A,H
+                DEC     H
+                AND     #07
+                JP      NZ,.j2
+                LD      A,L
+                SUB     #20
+                LD      L,A
+                LD      A,H
+                ADD     A,#08
+                LD      H,A
+.j2
+                DJNZ    .l_norm
+.final
+	ld a,c
+.o2 equ $+1
+	and #ff ; top pixel tremble
+	or (hl)
+	ld (hl),a
+
+                EX      DE,HL
+                RET
+
+.j_check        PUSH    DE
+                DEC     B
+                LD      D,#55
+.l_check
+                LD      A,C
+                AND     D
+                OR      (HL)
+                LD      (HL),A
+;upline
+                LD      A,H
+                DEC     H
+                AND     #07
+                JP      NZ,.j3
+                LD      A,L
+                SUB     #20
+                LD      L,A
+                LD      A,H
+                ADD     A,#08
+                LD      H,A
+.j3
+                RRC     D
+                DJNZ    .l_check
+                POP     DE
+                EX      DE,HL
+                RET
+
+;clearing line 15px: hl = bottom
+QZ_NO_ER
+                LD      A,H
+                AND     A
+                RET     Z ;no volume
+                LD      BC,#0F00
+.l1             LD      (HL),C
+;upline
+                LD      A,H
+                DEC     H
+                AND     #07
+                JP      NZ,.j1
+                LD      A,L
+                SUB     #20
+                LD      L,A
+                LD      A,H
+                ADD     A,#08
+                LD      H,A
+.j1             DJNZ    .l1
+                RET
+
+MOD_OCT         LD      A,C
+                LD      (MOD_OCTAVE),A
+PR_MODOCT       LD      HL,OCTCHAR
+                LD      A,(MOD_OCTAVE)
+                ADD     A,"1"
+                LD      (HL),A
+                LD      DE,#41AE
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                JR      Z,OCTAV-5
+                LD      DE,#419E
+;
+                CALL    _PRCH_1
+                XOR     A
+                RET
+OCTAV           LD      A,C
+                LD      (OCTAVE),A
+PR_OCT          LD      HL,OCTCHAR
+                LD      A,(OCTAVE)
+                ADD     A,"1"
+                LD      (HL),A
+                LD      DE,#41A4
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                JR      Z,OCTAV-5
+                LD      DE,#417E
+                JR      OCTAV-5
+EDIT_KEY
+;A-CODE
+                CP      14
+                JP      Z,INV_MODE
+                LD      BC,#0400
+                LD      HL,KEYMOCT
+.l1
+                CP      (HL)
+                JR      Z,MOD_OCT
+                INC     HL
+                INC     C
+                DJNZ    .l1
+
+                LD      BC,#0800
+                LD      HL,KEYOCT
+.l2
+                CP      (HL)
+                JR      Z,OCTAV
+                INC     HL
+                INC     C
+                DJNZ    .l2
+
+                LD      B,A
+                LD      A,(COLUMN)
+                AND     A
+                JP      Z,KEY_ZONE0 ; note column
+
+                LD      A,B
+                LD      BC,#1000
+                cp      '.' ; '.' = 0
+                jr      z,.j1
+                LD      HL,KEYNUM
+.l3
+                CP      (HL)
+                JR      Z,.j1
+                INC     HL
+                INC     C
+                DJNZ    .l3
+                XOR     A
+                RET
+.j1
+                LD      IX,SAMPDAT+8
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                JR      NZ,.j2
+                PUSH    BC
+                CALL    F_NOTEAD
+                POP     BC
+.j2
+                LD      E,#F0
+                LD      A,(COLUMN)
+                SRL     A
+                INC     A
+                LD      (KYZ1_O0+2),A
+                LD      (KYZ1_O1+2),A
+                JP      C,KYZ1_O0
+                LD      A,C
+                RLCA
+                RLCA
+                RLCA
+                RLCA
+                LD      C,A
+                LD      E,#0F
+KYZ1_O0         LD      A,(IX+0)
+                AND     E
+                OR      C
+KYZ1_O1         LD      (IX+0),A
+                LD      A,(CMODE)
+                AND     A
+                JR      Z,CHANGE_LINE
+                PUSH    IX
+                POP     HL
+                INC     HL
+                LD      DE,NUMDAT
+                LD      BC,3
+                LDIR
+CHANGE_LINE
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                RET     NZ
+                CALL    SCRL_INIT
+                CALL    SND_REC
+                CALL    PLAY_NINIT
+.loop           HALT
+                CALL    PLAY_TICK
+                CALL    PLAY_VOICE
+                CALL    _PLAY_AY
+                CALL    EQ
+                XOR     A
+                IN      A,(#FE)
+                CPL
+                AND     31
+                JP      NZ,.loop ;until pressed
+                HALT
+                CALL    _INIT_AY
+                JP      EQ
+KEY_ZONE0
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                JR      NZ,.j0
+                LD      C,A ;a=0
+                LD      A,B
+                CP      "l"
+                JR      Z,KYZ0_P0
+                CP      "."
+                JR      Z,KYZ0_P0
+                CP      #0c
+                JR      Z,KYZ0_P0
+                DEC     C
+                CP      "r"
+                JR      Z,KYZ0_P0
+.j0
+                LD      A,B
+                CP      "1"
+                JR      C,.j1
+                CP      "9"
+                JR      NC,.j1
+                SUB     "1"
+                LD      C,A
+                JP      OCTAV
+.j1
+                LD      BC,#0E02
+                LD      HL,KEYNOT
+.l1
+                CP      (HL)
+                JR      Z,CHAN_LINE+3
+                INC     HL
+                INC     C
+                DJNZ    .l1
+                XOR     A
+                RET
+KYZ0_P0
+                PUSH    BC
+                CALL    F_NOTEAD
+                POP     BC
+                LD      (IX),C
+CHAN_LINE       JP      CHANGE_LINE
+
+                LD      IX,SAMPDAT+8
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                JR      NZ,$+7
+                PUSH    BC
+                CALL    F_NOTEAD
+                POP     BC
+
+                LD      A,C
+                RLCA
+                RLCA
+                RLCA
+                LD      C,A
+                LD      A,(OCTAVE)
+                OR      C
+                LD      (IX),A
+                LD      A,(CMODE)
+                AND     A
+                JR      Z,CHAN_LINE
+KYZ0_J1
+                LD      HL,NUMDAT
+                LD      A,(HL)
+                LD      (IX+1),A
+                INC     HL
+                LD      A,(HL)
+                LD      (IX+2),A
+                INC     HL
+                LD      A,(HL)
+                LD      (IX+3),A
+                CP      #F1
+                JR      NC,CHAN_LINE
+                DEC     HL
+                LD      A,(HL)
+                AND     15
+                CP      8
+                JR      C,CHAN_LINE
+                CP      15
+                JR      NC,CHAN_LINE
+
+                LD      HL,HEIGH
+                LD      C,(HL)
+                LD      (HL),0
+                LD      A,(MOD_OCTAVE)
+                LD      (DIVM_OC+1),A
+                LD      A,(IX)
+                CALL    DIV_MODUL
+                LD      (IX+3),A
+                LD      (HL),C
+                JP      CHANGE_LINE
+DIV_MODUL
+                PUSH    HL
+                PUSH    BC
+                LD      C,A
+                LD      D,0
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                AND     7
+                LD      E,A
+                LD      HL,NOTTAB-1
+                ADD     HL,DE
+                LD      B,(HL)
+DIVM_OC         LD      A,0
+                ADD     A,C
+                AND     3
+                BIT     3,C
+                JR      Z,.j1
+                INC     B
+.j1
+                ADD     A,A
+                ADD     A,A
+                LD      C,A
+                ADD     A,A
+                ADD     A,C  ;*12
+                ADD     A,B
+                LD      E,A
+                LD      A,(HEIGH)
+                ADD     A,E
+                CP      48
+                JR      C,.j2
+                SUB     48
+                CP      104
+                JR      C,.j2
+                SUB     160
+.j2
+                LD      E,A
+                LD      D,0
+                LD      HL,TABDIV+96
+                ADD     HL,DE
+                ADD     HL,DE
+                LD      A,(HL)
+                POP     BC
+                POP     HL
+                RET
+
+INV_CHAN        LD      A,(HL)
+                CPL
+                LD      (HL),A
+
+PR_CHAN         LD      HL,MASK_A
+                LD      DE,#415F
+                LD      B,3
+.loop
+                LD      A,(HL)
+                PUSH    HL
+                LD      HL,CHANO
+                AND     A
+                JR      Z,.j1
+                INC     HL
+.j1
+                CALL    _PRCH_1
+                LD      A,31
+                ADD     A,E
+                LD      E,A
+                POP     HL
+                INC     HL
+                DJNZ    .loop
+                XOR     A
+                RET
+INV_TYPE
+                LD      HL,CTYPE
+                LD      A,(HL)
+                CPL
+                LD      (HL),A
+PR_TYPE
+                LD      A,(CTYPE)
+                LD      HL,COMTEXT
+                AND     A
+                JR      NZ,.j1
+                LD      HL,PATTEXT
+.j1
+                LD      DE,#4115
+                LD      B,7
+                PUSH    HL
+                CALL    _PRIN_STR
+                POP     HL
+                LD      DE,#4135
+                LD      B,7
+.j2
+                CALL    _PRIN_STR
+                XOR     A
+                RET
+INV_MODE
+                LD      HL,CMODE
+                LD      A,(HL)
+                CPL
+                LD      (HL),A
+PR_MODE         LD      A,(CMODE)
+                LD      HL,NORTEXT
+                AND     A
+                JR      Z,.j1
+                LD      HL,DIVTEXT
+.j1
+                LD      DE,#41B5
+                LD      A,(SMP_PREVIEW)
+                AND     A
+                JR      Z,.j2
+                LD      DE,#41BB
+.j2
+                LD      B,3
+                JR      PR_TYPE.j2
+F_NOTEAD
+                LD      A,(NLIN)
+                LD      C,A
+                LD      A,(POSITION)
+F_NOTEADB
+                CALL    _F_PATAD
+                LD      A,(CHANNEL)
+                ADD     A,A
+                ADD     A,A
+                LD      C,A
+                LD      B,0
+                ADD     IX,BC
+                RET
+PLAY_VOICE
+                LD      DE,AY_8
+                LD      HL,MASK_A
+                LD      B,3
+.l1
+                LD      A,(DE)
+                AND     (HL)
+                LD      (DE),A
+                INC     HL
+                INC     DE
+                DJNZ    .l1
+                RET
+SCROL_UP
+                LD      HL,TAB_SCRUP
+                LD      DE,#49C0
+                JR      SCROL_DOWN2
+SCROL_DOWN
+                LD      HL,TAB_SCRDOWN
+                LD      DE,#41C0
+SCROL_DOWN2
+                PUSH    DE
+                LD      A,5
+.l2             EX      AF,AF'
+                LD      A,(HL)
+                INC     HL
+                INC     HL
+                PUSH    HL
+                DEC     HL
+                LD      H,(HL)
+                LD      L,A
+                LD      B,8
+.l1             EX      DE,HL
+                POP     HL
+                LD      A,(HL)
+                INC     HL
+                INC     HL
+                PUSH    HL
+                DEC     HL
+                LD      H,(HL)
+                LD      L,A
+                LD      C,26+31
+                LDI
+                LDI
+                INC     L
+                INC     E
+                LDI
+                LDI
+                LDI
+                INC     L
+                INC     E
+                LDI
+                LDI
+                LDI
+                LDI
+                LDI
+                INC     L
+                INC     E
+                LDI
+                LDI
+                LDI
+                INC     L
+                INC     E
+                LDI
+                LDI
+                LDI
+                LDI
+                LDI
+                INC     L
+                INC     E
+                LDI
+                LDI
+                LDI
+                INC     L
+                INC     E
+                LDI
+                LDI
+                LDI
+                LDI
+                LDI
+                DEC     HL
+                LD      A,L
+                SUB     C
+                LD      L,A
+                DJNZ    .l1
+
+                POP     HL
+                EX      AF,AF'
+                DEC     A
+                JP      NZ,.l2
+
+                POP     DE
+                AND     A
+                JP      PRIN_STRING
+
+;=========================================
+POS_EDITOR
+                CALL    _WAIT_SPC
+                CALL    POS_SWITCH_AR
+                LD      A,191
+                LD      (ARR_BOT),A
+                LD      A,(POSLOOP)
+                LD      (PSA_I+1),A
+                XOR     A
+                LD      (MARKDATA),A
+                LD      A,120
+                LD      (ARR_TOP),A
+                LD      HL,#000F
+                LD      DE,#2009
+                LD      A,16
+                LD      BC,#7FFD
+                OUT     (C),A
+                LD      A,(COLOR_POS)
+                LD      C,A
+;                CALL    _WIN_STORE
+                CALL    _WIN_DRAW
+                LD      A,(POSITION)
+                CALL    INV_POSIT
+                LD      A,(POSLOOP)
+                CALL    PR_POSLP
+                CALL    PR_POSTAB
+POS_ARJ1        CALL    _ARR_INIT
+POS_ARJ2        HALT
+                CALL    _ARR_MOVE
+                LD      A,#7F
+                IN      A,(#FE)
+                LD      B,A
+                AND     4           ;"m"
+                JP      Z,POS_AM
+                XOR     A
+                LD      (PSA_O+1),A
+                LD      A,B
+                AND     1
+                JR      NZ,POS_ARJ2
+                LD      A,#FE
+                IN      A,(#FE)
+                AND     1
+                JP      Z,POS_EXIT
+                CALL    TAK_POS
+                EX      AF,AF'
+                CALL    _ARR_CLEAR
+                LD      A,(POSITION)
+                CALL    INV_POSIT
+                EX      AF,AF'
+                LD      (POSITION),A
+                CALL    INV_POSIT
+                XOR     A
+                LD      (NLIN),A
+                HALT
+                HALT
+                CALL    _BEEP
+                CALL    PR_COORD
+                CALL    SCRL_INIT
+
+POS_MIL1        CALL    USKOR_INIT
+
+POS_MIL2        LD      A,#7F
+                IN      A,(#FE)
+                AND     1
+                JP      NZ,POS_ARJ1
+                CALL    _ARR_CONTR
+                AND     A
+                JR      Z,POS_MIL1
+                EX      AF,AF'
+                CALL    POS_USKOR
+                JR      NZ,POS_MIL2
+                CALL    _BEEP
+                EX      AF,AF'
+                BIT     0,A
+                JP      NZ,POS_INS
+                BIT     1,A
+                JP      NZ,POS_DEL
+                LD      HL,POS_PRN
+                PUSH    HL
+                BIT     2,A
+                JR      NZ,POS_J1
+                CALL    POS_MIO1
+                JP      C,INC_PATTERN
+                JP      INC_MODUL
+POS_J1
+                CALL    POS_MIO1
+                JP      C,DEC_PATTERN
+                JP      DEC_MODUL
+POS_AM
+                CALL    TAK_POS
+                LD      C,A
+PSA_I           LD      B,0
+                CP      B
+                JR      Z,PSA_J1
+                LD      (PSA_I+1),A
+                JR      PSA_J2
+PSA_J1
+                LD      A,(POSLOOP)
+                CP      255
+                JR      Z,PSA_J3
+                LD      C,255
+PSA_J3
+PSA_O           LD      A,0
+                AND     A
+                JP      NZ,POS_ARJ2
+PSA_J2
+                PUSH    BC
+                CALL    _BEEP
+                CALL    _ARR_CLEAR
+                LD      A,(POSLOOP)
+                CALL    PR_POSLP
+                POP     BC
+                LD      A,C
+                LD      (POSLOOP),A
+                CALL    PR_POSLP
+                CALL    _ARR_INIT
+                LD      A,255
+                LD      (PSA_O+1),A
+                JP      POS_ARJ2
+PR_POSLP
+                CP      255
+                RET     Z
+                CALL    POS_SCRN
+                SRL     D
+                DEC     D
+                CALL    _SR_LINE
+                LD      B,5
+                LD      DE,LOOPSPR
+
+.l1             LD      A,(DE)
+                XOR     (HL)
+                LD      (HL),A
+                INC     L
+                INC     L
+                INC     L
+                INC     DE
+                LD      A,(DE)
+                XOR     (HL)
+                LD      (HL),A
+                DEC     L
+                DEC     L
+                DEC     L
+                INC     DE
+                CALL    _DW_LINE
+                DJNZ    .l1
+                RET
+TAK_POS
+                LD      A,(ARROW_Y)
+                SUB     121
+                JR      C,POS_OUT
+                LD      C,0
+                LD      L,7
+TAK_POS_L2
+                SUB     L
+                INC     C
+                JR      NC,TAK_POS_L2
+                DEC     C
+                LD      A,C
+                CP      10
+                JR      NC,POS_OUT
+                LD      A,(ARROW_X)
+                SUB     7
+                JR      C,POS_OUT
+                LD      B,0
+                LD      L,24
+TAK_POS_L1
+                SUB     L
+                INC     B
+                JR      NC,TAK_POS_L1
+                DEC     B
+                ADD     A,L
+                LD      L,A
+                CP      21
+                JR      NC,POS_OUT
+                LD      (POS_MIO1+1),A
+                LD      A,B
+                CP      10
+                JR      NC,POS_OUT
+                LD      A,C
+                ADD     A,A
+                LD      C,A
+                ADD     A,A
+                ADD     A,A
+                ADD     A,C
+                ADD     A,B
+                RET
+
+POS_OUT         POP     AF
+                JP      POS_ARJ1+3
+
+POS_MIO1        LD      A,0
+                CP      10
+                RET
+POS_PRN         LD      A,(POSITION)
+                PUSH    AF
+                CALL    INV_POSIT
+                POP     AF
+                PUSH    AF
+                CALL    PRIN_POS
+                POP     AF
+                CALL    INV_POSIT
+                CALL    PR_COORD
+                JP      POS_MIL2
+POS_INS
+                LD      HL,POSADR+197
+                LD      A,(POSITION)
+                LD      B,A
+                LD      A,99
+                SUB     B
+                JR      Z,POS_INJ1
+                LD      B,A
+POS_INL1        LD      A,(HL)
+                INC     HL
+                INC     HL
+                LD      (HL),A
+                DEC     HL
+                DEC     HL
+                DEC     HL
+                LD      A,(HL)
+                INC     HL
+                INC     HL
+                LD      (HL),A
+                DEC     HL
+                DEC     HL
+                DEC     HL
+                DJNZ    POS_INL1
+POS_INJ1        CALL    SCRL_INIT
+                CALL    PR_COORD
+                CALL    PR_POSTAB
+                JP      POS_MIL2
+POS_DEL
+                LD      A,(POSITION)
+                PUSH    AF
+                CALL    _F_POSAD
+                INC     HL
+                POP     AF
+                LD      B,A
+                LD      A,99
+                SUB     B
+                JR      Z,POS_DEJ1
+                LD      B,A
+POS_DEL1        LD      A,(HL)
+                DEC     HL
+                DEC     HL
+                LD      (HL),A
+                INC     HL
+                INC     HL
+                INC     HL
+                LD      A,(HL)
+                DEC     HL
+                DEC     HL
+                LD      (HL),A
+                INC     HL
+                INC     HL
+                INC     HL
+                DJNZ    POS_DEL1
+                DEC     HL
+                DEC     HL
+                LD      A,255
+                LD      (HL),A
+                INC     A
+                INC     HL
+                LD      (HL),A
+POS_DEJ1        CALL    SCRL_INIT
+                CALL    PR_COORD
+                CALL    PR_POSTAB
+                JP      POS_MIL2
+POS_EXIT
+                LD      A,47
+                LD      (ARR_BOT),A
+                XOR     A
+                LD      (ARR_TOP),A
+                DEC     A
+                LD      (MARKDATA),A
+                LD      A,16
+                LD      BC,#7FFD
+                OUT     (C),A
+                CALL    PR_PSM
+                CALL    PR_MARK
+;                CALL    _WIN_CLOSE
+
+POS_SWITCH_AR   LD      HL,(ARROW_Y)
+                LD      DE,#809C ;starting pos arrow coord
+.storedcoord    EQU     $-2
+                LD      (.storedcoord),HL
+                LD      (ARROW_Y),DE
+                RET
+INV_POSIT
+                CALL    POS_SCRN
+                DEC     E
+                SRL     D
+                DEC     D
+                CALL    _SR_LINE
+                LD      B,7
+.l1             LD      A,#01 ;left pixel
+                XOR     (HL)
+                LD      (HL),A
+                INC     L
+                LD      A,(HL)
+                CPL
+                LD      (HL),A
+                INC     L
+                LD      A,(HL)
+                CPL
+                LD      (HL),A
+                INC     L
+                LD      A,#F0 ;right pixel
+                XOR     (HL)
+                LD      (HL),A
+                DEC     L
+                DEC     L
+                DEC     L
+                CALL    _DW_LINE
+                DJNZ    .l1
+                RET
+PR_POSTAB
+                LD      B,100
+                XOR     A
+PR_POSTL1       PUSH    BC
+                LD      C,A
+                LD      A,(POSITION)
+                CP      C
+                LD      A,C
+                PUSH    AF
+                CALL    Z,INV_POSIT
+                POP     AF
+                PUSH    AF
+                CALL    PRIN_POS
+                POP     AF
+                LD      C,A
+                LD      A,(POSITION)
+                CP      C
+                LD      A,C
+                PUSH    AF
+                CALL    Z,INV_POSIT
+                POP     AF
+                INC     A
+                POP     BC
+                DJNZ    PR_POSTL1
+                RET
+;a - position => d = x, e = y
+POS_SCRN
+                LD      C,0
+                LD      L,10
+.l1             SUB     L
+                INC     C
+                JP      NC,.l1 
+                DEC     C      ;c= a div 10
+
+                ADD     A,L    ;a= a mod 10
+                ADD     A,A ;*2
+                LD      D,A
+                ADD     A,A ;*4
+                ADD     A,D ;*6
+                ADD     A,2 
+                LD      D,A ;d = a*6+2 
+                LD      A,C
+                ADD     A,A
+                ADD     A,A
+                ADD     A,A 
+                SUB     C   ;*7
+                ADD     A,122
+                LD      E,A
+                RET
+PRIN_POS
+;A-POSITION (0-99)
+                PUSH    AF
+                CALL    POS_SCRN
+                POP     AF
+PR_POS
+;D-X E-Y A-POS
+                PUSH    DE
+                CALL    _F_POSAD
+                EX      AF,AF'
+                LD      A,E
+                POP     DE
+                CP      255
+                JR      Z,.empty
+                EX      AF,AF'
+                PUSH    AF
+                EX      AF,AF'
+                CALL    .num12 ;"00"-"99"
+                LD      C,10 ; "+"
+                POP     AF
+                LD      B,A
+                CP      128
+                JR      C,.plusminus
+                INC     C ; "-"
+                NEG
+                LD      B,A
+.plusminus      LD      A,C
+                CALL    _PRINT_4
+                LD      A,B
+
+
+.num12          LD      HL,10
+.l2             SUB     L
+                INC     H
+                JP      NC,.l2
+                DEC     H
+                ADD     A,L
+                EX      AF,AF'
+                LD      A,H
+                CALL    _PRINT_4
+                EX      AF,AF'
+                JP      _PRINT_4
+.empty          LD      B,5
+.l1             LD      A,11 ;"-"
+                CALL    _PRINT_4
+                DJNZ    .l1
+                RET
+
+SWAP ;uses int vector table #b200
+                LD      A,(MARK_PAT)
+                CP      255
+                RET     Z
+                LD      C,A
+
+                LD      A,(POSITION)
+                CALL    _F_POSAD
+                LD      A,E
+                CP      C
+                JR      NZ,.j1
+                LD      A,(MARK_CHAN)
+                LD      L,A
+                LD      A,(CHANNEL)
+                CP      L
+                RET     Z
+.j1
+                LD      L,C
+                LD      A,(MARKSTP_ST)
+                LD      H,A
+                LD      A,(MARKSTP_EN)
+                CP      255
+                RET     Z
+                SUB     H
+                INC     A
+                LD      B,A
+
+                DI                ;stop int
+                PUSH    HL
+
+                LD      DE,BUFFER_256
+.l1
+                CALL    F_NOTEADA
+                CALL    OMVXD ;ix -> de
+                INC     H
+                DJNZ    .l1
+
+                CALL    TK_DAT
+                LD      DE,#B200
+.l2
+                CALL    TK_NOTAD
+                CALL    OMVXD ;ix -> de
+                INC     H
+                DJNZ    .l2
+
+                CALL    TK_DAT
+                LD      DE,BUFFER_256
+                LD      C,0
+.l3
+                CALL    TK_NOTAD
+                CALL    OMVDX ;de ->ix
+                LD      A,H
+                INC     H
+                INC     C
+                CP      64
+                JR      NC,.enough
+                DJNZ    .l3
+.enough
+                LD      DE,#B200
+                LD      B,C
+                POP     HL
+.l4
+                CALL    F_NOTEADA
+                CALL    OMVDX
+                INC     H
+                DJNZ    .l4
+
+                CALL    DAT_INIT  ;restore int
+                EI
+                JP      SCRL_INIT
+
+LOOPSPR         DEFB    #08,#02 ;><
+                DEFB    #04,#04
+                DEFB    #02,#08
+                DEFB    #04,#04
+                DEFB    #08,#02
+
+TAB_SCRUP       DEFW    #41C0,#41E0,#4900,#4920,#4940,#4960,#4980,#49A0,#49C0
+                DEFW    #42C0,#42E0,#4A00,#4A20,#4A40,#4A60,#4A80,#4AA0,#4AC0
+                DEFW    #43C0,#43E0,#4B00,#4B20,#4B40,#4B60,#4B80,#4BA0,#4BC0
+                DEFW    #44C0,#44E0,#4C00,#4C20,#4C40,#4C60,#4C80,#4CA0,#4CC0
+                DEFW    #45C0,#45E0,#4D00,#4D20,#4D40,#4D60,#4D80,#4DA0,#4DC0
+TAB_SCRDOWN     DEFW    #49C0,#49A0,#4980,#4960,#4940,#4920,#4900,#41E0,#41C0
+                DEFW    #4AC0,#4AA0,#4A80,#4A60,#4A40,#4A20,#4A00,#42E0,#42C0
+                DEFW    #4BC0,#4BA0,#4B80,#4B60,#4B40,#4B20,#4B00,#43E0,#43C0
+                DEFW    #4CC0,#4CA0,#4C80,#4C60,#4C40,#4C20,#4C00,#44E0,#44C0
+                DEFW    #4DC0,#4DA0,#4D80,#4D60,#4D40,#4D20,#4D00,#45E0,#45C0
+KEYNOT          DEFB    "n","j","m",1,"z","s","x","d","c",1,"v","g","b","h"
+KEYNUM          DEFB    "0123456789abcdef" 
+KEYOCT          DEFB    "!@#$%'("
+KEYMOCT         DEFB    7,6,4,5
+PATTEXT         DEFB    "PATTERN:"
+CHANTX          DEFB    "CHANNEL:"
+TOTX            DEFB    "to"
+COMTEXT         DEFB    "COMPOSE"
+NORTEXT         DEFB    "NRM"
+DIVTEXT         DEFB    "EXT"
+NOTEXT_         DEFB    "--"
+CHANO           DEFB    "-+"
+OCTCHAR         DEFB    0

@@ -1,0 +1,1183 @@
+
+IVB
+                LD      A,(ARROW_Y)
+                CALL    DIV_6
+                LD      A,255
+                CP      H
+                RET     Z
+                LD      A,H
+                LD      (IVB+7),A
+                XOR     A
+                DEC     A
+                RET
+NUPD_TAKE
+                LD      A,(COLUMN)
+                CP      3
+                JR      NC,NUPD_ORN1
+                LD      A,(SMP)
+                CALL    _F_SAMPAD
+                LD      A,(CUR_Y)
+                LD      L,A
+                ADD     A,A
+                ADD     A,L
+                LD      L,A
+                LD      H,0
+                ADD     HL,DE
+                PUSH    HL
+                POP     IX
+                LD      H,(IX+3)
+                LD      A,H
+                AND     3
+                BIT     2,H
+                JR      Z,$+4
+                OR      #FC
+                LD      H,A
+                LD      L,(IX+4)
+                RET
+NUPD_ORN1       LD      A,(ORN_)
+                CALL    _F_ORNAD
+                LD      A,(CUR_Y)
+                LD      L,A
+                LD      H,0
+                ADD     HL,DE
+                PUSH    HL
+                POP     IX
+                LD      L,(IX+2)
+                LD      H,0
+                BIT     7,L
+                RET     Z
+                LD      H,255
+                RET
+NUPD_PUT
+                LD      A,(COLUMN)
+                CP      3
+                JR      NC,SNDNUM_O2
+                LD      A,(IX+3)
+                XOR     H
+                AND     #F8
+                XOR     H
+                LD      (IX+3),A
+                LD      (IX+4),L
+                LD      A,(CUR_Y)
+                LD      E,A
+                LD      C,L
+                LD      B,H
+                JP      PRDEC_3
+SNDNUM_O2       LD      C,L
+                LD      A,(CUR_Y)
+                LD      E,A
+                LD      (IX+2),L
+                JP      PRDEC_2
+GO_ORNUM
+                LD      A,(ORN_)
+                CP      32
+                RET     NC
+                LD      A,3
+                LD      DE,#2301
+                LD      BC,12
+                LD      HL,99
+                JR      SSCRN
+GO_SMNUM
+                XOR     A
+                LD      DE,#2B02
+                LD      BC,0-32
+                LD      HL,999
+SSCRN
+                LD      (COLUMN),A
+                LD      (SMNM_O1+4),HL
+                LD      (SMNM_O1+1),BC
+                LD      A,D
+                LD      (SMND),A
+                XOR     8
+                LD      (SMNU),A
+                LD      A,(SMF)
+                AND     A
+                RET     Z
+                BIT     2,A
+                JP      NZ,NUMED
+                PUSH    AF
+                CALL    IVB
+                EX      AF,AF'
+                LD      A,H
+                LD      (CUR_Y),A
+                POP     AF
+                BIT     0,A
+                JR      NZ,SARN+3
+                EX      AF,AF'
+                RET     Z
+                CALL    AROFF
+                CALL    NUPD_TAKE
+                LD      HL,0
+                CALL    NUPD_PUT
+SARN            JP      ARON
+                CALL    AROFF
+                CALL    USKOR_INIT
+                HALT
+                LD      A,(SMF)
+                AND     1
+                JR      Z,SARN
+                CALL    _ARR_CONTR
+                AND     A
+                JR      Z,SARN+6
+                CALL    NUPD_TAKE
+                CALL    POS_USKOR
+                JR      NZ,SARN+9
+                LD      A,B
+SMNM_O1         LD      DE,32
+                LD      BC,999
+                BIT     0,A
+                CALL    NZ,SMNL
+                BIT     1,A
+                CALL    NZ,SMNR
+                BIT     2,A
+                CALL    NZ,SMNU
+                BIT     3,A
+                CALL    NZ,SMND
+                CALL    NUPD_PUT
+                JR      SARN+9
+SMNR            AND     A
+                SBC     HL,DE
+                JR      SMNU+1
+SMNL            ADD     HL,DE
+                JR      SMNU+1
+SMND            INC     HL
+                JR      SMNU+1
+SMNU            DEC     HL
+                PUSH    HL
+                ADD     HL,BC
+                PUSH    BC
+                PUSH    HL
+                SLA     C
+                RL      B
+                PUSH    BC
+                AND     A
+                POP     BC
+                POP     HL
+                SBC     HL,BC
+                POP     BC
+                POP     HL
+                RET     C
+                BIT     7,H
+                PUSH    BC
+                JR      Z,$+10
+                LD      HL,0
+                AND     A
+                SBC     HL,BC
+                POP     BC
+                RET
+                LD      H,B
+                LD      L,C
+                POP     BC
+                RET
+GO_NOBIT
+                CALL    IVB
+                RET     Z
+                LD      A,H
+                LD      (NSMO1+1),A
+                ADD     A,A
+                ADD     A,H
+                LD      (NSMO2+2),A
+                LD      (NSMO3+2),A
+                INC     A
+                LD      (NSMO4+2),A
+NSMO2           LD      A,(IY+0)
+                XOR     #80
+                LD      C,A
+                LD      A,(SMF)
+                AND     8
+                LD      A,C
+                JR      Z,NSMO3
+                OR      #80
+NSMO3           LD      (IY+0),A
+PRNS            LD      C,A
+NSMO4           LD      A,(IY+1)
+                RRCA
+                RRCA
+                RRCA
+                XOR     C
+                AND     #1F
+                XOR     C
+                AND     #9F
+                LD      B,A
+                LD      C,9
+                CALL    AROFF
+NSMO1           LD      DE,0*256
+                CALL    PRSCAL
+                JP      ARON
+GO_TNBIT
+                CALL    IVB
+                RET     Z
+                LD      A,H
+                LD      (VLMO1+1),A
+                LD      H,A
+                ADD     A,A
+                ADD     A,H
+                LD      (VLMO2+2),A
+                LD      (VLMO3+2),A
+VLMO2           LD      A,(IY+0)
+                XOR     #10
+                LD      C,A
+                LD      A,(SMF)
+                AND     8
+                LD      A,C
+                JR      Z,VLMO3
+                OR      #10
+VLMO3           LD      (IY+0),A
+PRVL            LD      C,A
+                AND     #10
+                RLCA
+                RLCA
+                RLCA
+                XOR     C
+                AND     #F0
+                XOR     C
+                LD      B,A
+                LD      C,5
+                CALL    AROFF
+VLMO1           LD      DE,10*256
+                CALL    PRSCAL
+                JP      ARON
+
+IVSC            LD      C,0
+                LD      A,(ARROW_Y)
+                CALL    DIV_6
+                LD      A,255
+                CP      H
+                JR      Z,$+8
+                LD      A,H
+                LD      (IVSC+9),A
+                LD      C,255
+                LD      A,(ARROW_X)
+                SUB     B
+                SRL     A
+                BIT     6,A
+                LD      B,0
+                JR      NZ,$+8
+                LD      B,E
+                DEC     B
+                CP      E
+                JR      NC,$+3
+                LD      B,A
+                LD      A,255
+                CP      B
+                JR      Z,$+7
+                LD      A,B
+                LD      ($-5),A
+                RET
+                LD      A,C
+                AND     A
+                RET
+GO_NOSCAL
+                LD      B,8
+                LD      E,32
+                CALL    IVSC
+                EX      AF,AF'
+                LD      A,H
+                LD      (NSMO1+1),A
+                ADD     A,A
+                ADD     A,H
+                LD      (NSCO4+2),A
+                INC     A
+                LD      (NSCO2+2),A
+                LD      (NSCO3+2),A
+                LD      (NSMO4+2),A
+NSCO2           LD      A,(IY+1)
+                LD      C,A
+                RRCA
+                RRCA
+                RRCA
+                LD      D,A
+                LD      A,(SMF)
+                LD      E,A
+                AND     1
+                JR      Z,NSCJ0
+                EX      AF,AF'
+                RET     Z
+                EX      AF,AF'
+                JR      NSCJ1
+NSCJ0           BIT     3,E
+                JR      NZ,NSCJ2
+                BIT     2,E
+                RET     Z
+                LD      A,1
+                LD      (LLIN_O1+1),A
+                LD      A,#F8
+                LD      (LLIN_O2+1),A
+                LD      DE,8*256+32
+                JP      LINE_MOVE
+NSCJ1
+                LD      A,B
+                RLCA
+                RLCA
+                RLCA
+                XOR     C
+                AND     #F8
+                XOR     C
+NSCO3           LD      (IY+1),A
+NSCO4           LD      A,(IY+0)
+                JP      PRNS
+NSCJ2
+                LD      A,D
+                AND     #1F
+                POP     DE
+                JP      Z,SND_L0
+                PUSH    DE
+                LD      B,0
+                JR      NSCJ1
+GO_TNSCAL
+                LD      B,88
+                LD      E,16
+                CALL    IVSC
+                EX      AF,AF'
+                LD      A,H
+                LD      (VLMO1+1),A
+                ADD     A,A
+                ADD     A,H
+                LD      (TNCO2+2),A
+                LD      (TNCO3+2),A
+TNCO2           LD      A,(IY+0)
+                LD      C,A
+                LD      A,(SMF)
+                LD      E,A
+                AND     1
+                JR      Z,TNCJ0
+                EX      AF,AF'
+                RET     Z
+                EX      AF,AF'
+                LD      A,B
+                JR      TNCJ1
+TNCJ0           BIT     3,E
+                JR      NZ,TNCJ2
+                BIT     2,E
+                RET     Z
+                XOR     A
+                LD      (LLIN_O1+1),A
+                LD      A,#0F
+                LD      (LLIN_O2+1),A
+                LD      DE,88*256+16
+                JR      LINE_MOVE
+TNCJ1           XOR     C
+                AND     #0F
+                XOR     C
+TNCO3           LD      (IY+0),A
+                JP      PRVL
+TNCJ2           LD      A,C
+                AND     #0F
+                POP     DE
+                JP      Z,SND_L0
+                PUSH    DE
+                XOR     A
+                JR      TNCJ1
+LINE_MOVE
+                LD      A,E
+                LD      (LM_O1+1),A
+                LD      A,D
+                LD      (LIN_O1+1),A
+                LD      (LIN_O2+1),A
+                LD      A,B
+                AND     #1F
+                LD      (LIN_X1+1),A
+                LD      (LIN_X2+1),A
+                LD      A,H
+                LD      (LIN_Y1+1),A
+                LD      (LIN_Y2+1),A
+                CALL    AROFF
+                CALL    PRN_LINE
+
+                HALT
+                LD      A,(SMF)
+                AND     4
+                JR      Z,LIN_LL
+                JR      $-8
+LIN_L0          CALL    PRN_LINE
+LIN_LL          HALT
+                HALT
+                HALT
+                LD      A,(SMF)
+                BIT     3,A
+                JR      NZ,LIN_EX1
+                AND     5
+                JR      NZ,LIN_EX2
+                CALL    _ARR_CONTR
+                AND     A
+                JR      Z,LIN_LL
+                LD      A,(LIN_X1+1)
+                BIT     0,B
+                CALL    NZ,LIN_RG
+                BIT     1,B
+                CALL    NZ,LIN_DEC
+                BIT     4,B
+                JR      NZ,LIN_JJ1
+                CALL    PRN_LINE
+                LD      (LIN_X1+1),A
+                SET     5,B
+LIN_JJ1         RES     4,B
+                LD      A,(LIN_Y1+1)
+                BIT     2,B
+                CALL    NZ,LIN_DW
+                BIT     3,B
+                CALL    NZ,LIN_DEC
+                BIT     5,B
+                CALL    Z,PRN_LINE
+                BIT     4,B
+                JR      NZ,LIN_L0
+                LD      (LIN_Y1+1),A
+                JR      LIN_L0
+LIN_EX1         CALL    PRN_LINE
+LINX1           HALT
+                LD      A,(SMF)
+                AND     8
+                JR      NZ,LINX1
+                JP      ARON
+LIN_EX2         CALL    PRN_LINE
+                CALL    LIN_X1
+                LD      (ARROW_Y),DE
+LINX2           HALT
+                LD      A,(SMF)
+                AND     5
+                JR      NZ,LINX2
+                CALL    ARON
+                LD      A,(LIN_Y2+1)
+                LD      D,A
+                LD      A,(LIN_Y1+1)
+                SUB     D
+                LD      H,A
+                LD      B,0
+                JR      Z,LLIN_I1
+                LD      B,4
+                JR      NC,LLIN_I1
+                XOR     A
+                SUB     H
+                LD      H,A
+                LD      B,5
+LLIN_I1         LD      A,(LIN_X2+1)
+                LD      E,A
+                LD      A,(LIN_X1+1)
+                SUB     E
+                LD      L,A
+                LD      A,0
+                JR      Z,LLIN_I2
+                LD      A,12
+                JR      NC,LLIN_I2
+                XOR     A
+                SUB     L
+                LD      L,A
+                LD      A,13
+LLIN_I2         LD      (LLIN_S1),A
+                LD      A,B
+                LD      (LLIN_S2),A
+                LD      B,D
+                LD      C,E
+                LD      E,H
+                LD      H,0
+                LD      D,H
+                LD      A,L
+                ADD     HL,HL
+                SBC     HL,DE
+                LD      D,A
+                EX      AF,AF'
+                LD      A,E
+                AND     A
+                JP      Z,LLIN_PIK
+LLIN_L1         EX      AF,AF'
+                CALL    LLIN_IX
+LLIN_J1         BIT     7,H
+                JR      NZ,LLIN_J2
+                LD      A,D
+                LD      D,0
+                SBC     HL,DE
+                AND     A
+                SBC     HL,DE
+                LD      D,A
+LLIN_S1         DEFB    0
+                JP      LLIN_J1
+LLIN_J2         LD      A,E
+                LD      E,D
+                LD      D,0
+                ADD     HL,DE
+                ADD     HL,DE
+                LD      D,E
+                LD      E,A
+LLIN_S2         DEFB    0
+                EX      AF,AF'
+                DEC     A
+                JP      NZ,LLIN_L1
+LLIN_IX         PUSH    HL
+                PUSH    DE
+                PUSH    BC
+                LD      A,B
+                ADD     A,A
+                ADD     A,B
+LLIN_O1         ADD     A,0
+                LD      (LLNX_O1+2),A
+                LD      (LLNX_O2+2),A
+                LD      (NSMO4+2),A
+                DEC     A
+                LD      (LLNX_O3+2),A
+                LD      A,(LLIN_O1+1)
+                AND     A
+                LD      A,C
+                JR      Z,LLNX_O1
+                RLCA
+                RLCA
+                RLCA
+LLNX_O1         LD      C,(IY+0)
+                XOR     C
+LLIN_O2         AND     0
+                XOR     C
+LLNX_O2         LD      (IY+0),A
+                LD      C,A
+                LD      A,(LLIN_O1+1)
+                AND     A
+                LD      A,B
+                JR      Z,LLNX_JJ1
+                LD      (NSMO1+1),A
+LLNX_O3         LD      A,(IY+0)
+                CALL    PRNS
+                JR      LLNX_JJ2
+LLNX_JJ1        LD      (VLMO1+1),A
+                LD      A,C
+                CALL    PRVL
+LLNX_JJ2        POP     BC
+                POP     DE
+                POP     HL
+                RET
+LLIN_PIK        LD      A,(LIN_X1+1)
+                CP      C
+                JR      C,LLIN_IX
+                LD      C,A
+                JR      LLIN_IX
+LIN_RG          INC     A
+LM_O1           CP      0
+                RET     C
+LIN_J1          SET     4,B
+                RET
+LIN_DW          INC     A
+                CP      32
+                RET     C
+                JR      LIN_J1
+LIN_DEC         DEC     A
+                RET     P
+                JR      LIN_J1
+LIN_X1          LD      A,0
+                ADD     A,A
+LIN_O1          ADD     A,0
+                LD      D,A
+LIN_Y1          LD      A,0
+                ADD     A,A
+                LD      E,A
+                ADD     A,A
+                ADD     A,E
+                ADD     A,3
+                LD      E,A
+                RET
+PRN_LINE
+                PUSH    AF
+                PUSH    DE
+                PUSH    BC
+                CALL    LIN_X1
+LIN_X2          LD      A,0
+                ADD     A,A
+LIN_O2          ADD     A,0
+                LD      B,A
+LIN_Y2          LD      A,0
+                ADD     A,A
+                LD      C,A
+                ADD     A,A
+                ADD     A,C
+                ADD     A,3
+                LD      C,A
+                CALL    _LINE
+                POP     BC
+                POP     DE
+                POP     AF
+                RET
+GO_ORREP
+                LD      A,(ORN_)
+                CP      32
+                RET     NC
+                LD      B,A
+                CALL    _F_ORNAD
+                LD      HL,#8028
+                JR      GO_SMREP+10
+GO_SMREP
+                LD      A,(SMP)
+                LD      B,A
+                CALL    _F_SAMPAD
+                LD      HL,#2023
+
+                LD      A,H
+                LD      (REPP_O1+1),A
+                LD      A,L
+                LD      (REPP_O2+1),A
+                PUSH    DE
+                CALL    AROFF
+                POP     IX
+                LD      H,(IX+0)
+                LD      L,(IX+1)
+REP_LL          HALT
+                HALT
+                HALT
+                CALL    _ARR_CONTR
+                LD      A,(SMF)
+                LD      C,A
+                AND     5
+                JP      Z,ARON
+                BIT     0,C
+                CALL    NZ,REP_SP
+                BIT     2,C
+                CALL    NZ,REP_M
+                PUSH    HL
+                PUSH    BC
+REPP_O2         LD      D,0
+                LD      C,H
+                LD      B,L
+                CALL    PR_REP
+                XOR     A
+                CALL    PRINT_DEL
+                POP     BC
+                POP     HL
+                LD      (IX+0),H
+                LD      (IX+1),L
+                JR      REP_LL
+REP_SP          BIT     3,B
+                JR      NZ,RPSU
+                BIT     2,B
+                JR      NZ,RPSD
+                RET
+RPSU            LD      A,H
+                AND     31
+                RET     Z
+                DEC     A
+                CALL    RPMX
+                AND     31
+                INC     A
+                CALL    RPCP
+                RET     C
+                LD      L,0
+                RET
+RPSD            LD      A,H
+                AND     31
+                CP      31
+                RET     NC
+                INC     A
+RPMX            XOR     H
+                AND     31
+                XOR     H
+                LD      H,A
+                RET
+RPCP            LD      D,A
+                LD      A,L
+                AND     31
+                CP      D
+                RET
+REP_M           BIT     3,B
+                JR      NZ,RPMU
+                BIT     2,B
+                JR      NZ,RPMD
+                RET
+RPMU            LD      A,L
+                AND     #E0
+                JR      NZ,RPMUJ
+                LD      A,H
+                AND     31
+                CALL    RPMX2
+REPP_O1         OR      0
+                LD      L,A
+                RET
+RPMUJ           LD      A,L
+                AND     31
+                RET     Z
+                DEC     A
+RPMX2           XOR     L
+                AND     31
+                XOR     L
+                LD      L,A
+                RET
+RPMD            LD      A,H
+                AND     31
+                CALL    RPCP
+                JR      NC,$+5
+                INC     A
+                JR      RPMX2
+
+                LD      L,0
+                RET
+SNCUR
+                SRL     D
+                EX      AF,AF'
+                CALL    _SR_LINE
+                EX      AF,AF'
+                BIT     0,A
+                LD      A,#0F
+                JR      C,$+3
+                CPL
+
+                JR      Z,$+5
+                XOR     (HL)
+                LD      (HL),A
+                RET
+
+                CPL
+                AND     (HL)
+                LD      (HL),A
+                RET
+PRORN
+                LD      A,(ORN_)
+                LD      B,A
+                CP      32
+                JR      C,PRORN_J0
+                LD      HL,#4000
+                LD      DE,#28C0
+                XOR     A
+                CALL    PR_VER
+                JR      PRORN_J1
+PRORN_J0        CALL    _F_ORNAD
+                EX      DE,HL
+                LD      C,(HL)
+                INC     HL
+                LD      B,(HL)
+                INC     HL
+                LD      D,40
+                CALL    PR_REP
+PRORN_J1        LD      E,0
+
+                LD      C,(HL)
+                PUSH    DE
+                PUSH    HL
+                CALL    PRDEC_2
+                POP     HL
+                INC     HL
+                POP     DE
+                INC     E
+                LD      A,E
+                CP      32
+                JR      C,PRORN_J1+2
+                RET
+PRDEC_2
+                LD      A,E
+                ADD     A,A
+                ADD     A,E
+                ADD     A,A
+                LD      E,A
+                LD      D,37
+                LD      A,(ORN_)
+                AND     #E0
+                JR      Z,$+12
+                LD      B,3
+
+                LD      A,12 ;" "
+                CALL    _PRINT_4
+                DJNZ    $-5
+                RET
+
+                LD      A,C
+                CP      128
+                LD      L,10 ;"+"
+                JP      C,$+6
+                INC     L    ;"-"
+                NEG
+                EX      AF,AF'
+                LD      A,L
+                CALL    _PRINT_4
+                EX      AF,AF'
+                LD      C,0
+                LD      L,10
+                SUB     L
+                INC     C
+                JP      NC,$-2
+                DEC     C
+                ADD     A,L
+                EX      AF,AF'
+                LD      A,C
+                CALL    _PRINT_4 ;"0"-"9"
+                EX      AF,AF'
+                JP      _PRINT_4 ;"0"-"9"
+PRSMP
+                XOR     A
+                CALL    PRINT_DEL
+                LD      A,(SMP)
+                LD      B,A
+                CALL    _F_SAMPAD
+                EX      DE,HL
+                LD      C,(HL)
+                INC     HL
+                LD      B,(HL)
+                INC     HL
+                LD      D,35
+                CALL    PR_REP
+                LD      E,0
+PRSMP_LL
+                LD      C,(HL)
+                LD      A,C
+                RLCA
+                RLCA
+                RLCA
+                AND     128
+                LD      B,A
+                LD      A,C
+                AND     15
+                OR      B
+                LD      B,A
+                LD      C,5
+                LD      D,10
+                CALL    PRSCAL
+                LD      C,(HL)
+                INC     HL
+                LD      A,C
+                AND     128
+                LD      B,A
+                LD      A,(HL)
+                RRCA
+                RRCA
+                RRCA
+                AND     31
+                OR      B
+                LD      B,A
+                LD      C,9
+                LD      D,0
+                CALL    PRSCAL
+                LD      B,(HL)
+                INC     HL
+                LD      C,(HL)
+                INC     HL
+                CALL    PRDEC_3
+                LD      A,E
+                INC     A
+                AND     31
+                LD      E,A
+                JP      NZ,PRSMP_LL
+                RET
+PRDEC_3
+                PUSH    DE
+                PUSH    HL
+                PUSH    BC
+                LD      D,31
+                LD      A,E
+                ADD     A,A
+                ADD     A,E
+                ADD     A,A
+                LD      E,A
+                LD      A,11 ;"-"
+                BIT     2,B
+                POP     BC
+                JR      Z,$+12
+                LD      HL,0
+                AND     A
+                SBC     HL,BC
+                DEC     A ;"+"
+                PUSH    HL
+                JR      $+12
+
+                LD      H,A
+                LD      A,B
+                AND     3
+                OR      C
+                LD      A,H
+                PUSH    BC
+                JR      NZ,$+3
+                DEC     A
+
+                CALL    _PRINT_4 ;""
+                POP     HL
+                LD      A,3
+                AND     H
+                LD      H,A
+                LD      BC,100
+                CALL    PRDC_NUM
+                LD      BC,10
+                CALL    PRDC_NUM
+                LD      A,L
+                CALL    _PRINT_4
+                POP     HL
+                POP     DE
+                RET
+PRDC_NUM
+                XOR     A
+                AND     A
+                SBC     HL,BC
+                INC     A
+                JP      NC,$-4
+                DEC     A
+                ADD     HL,BC
+                PUSH    HL
+                CALL    _PRINT_4
+                POP     HL
+                RET
+PRSCAL
+                PUSH    HL
+                PUSH    DE
+                LD      HL,STRING+9
+                LD      A,9
+
+                LD      (HL),0
+                DEC     HL
+                DEC     A
+                JP      NZ,$-4
+                LD      A,B
+                RLCA
+                CPL
+                AND     1
+                ADD     A,9
+                LD      (HL),A
+                INC     HL
+                LD      A,B
+                AND     31
+                INC     A
+                LD      B,A
+                LD      A,3
+
+                INC     (HL)
+                CP      (HL)
+                JR      NC,$+3
+                INC     HL
+
+                DJNZ    $-5
+                LD      B,C
+                LD      HL,STRING+1
+                LD      A,4
+                ADD     A,(HL)
+                LD      (HL),A
+                DEC     HL
+                CALL    _PRSTR_R
+                POP     DE
+                POP     HL
+                RET
+PR_REP
+                PUSH    HL
+                PUSH    DE
+                LD      HL,#4000
+                LD      E,1
+                LD      A,#FF
+                CALL    PR_VER
+                LD      A,C
+                AND     #1F
+                LD      C,A
+                LD      A,B
+                AND     #1F
+                CP      B
+                LD      B,A
+                JR      Z,NO_REP
+                AND     A
+                JR      NC,$+3
+                XOR     A
+
+                JR      Z,PRR_J2
+                ADD     A,A
+                LD      E,A
+                ADD     A,A
+                ADD     A,E
+                DEC     A
+                LD      E,A
+                LD      A,#11
+                CALL    PR_VER
+                LD      E,1
+                LD      A,#FF
+                CALL    PR_VER
+PRR_J2          LD      A,C
+                SUB     B
+                INC     A
+                ADD     A,A
+                LD      E,A
+                ADD     A,A
+                ADD     A,E
+                SUB     2
+                LD      E,A
+                LD      A,#55
+                CALL    PR_VER
+PRR_J0          LD      E,1
+                LD      A,#FF
+                CALL    PR_VER
+                LD      A,C
+                INC     A
+                ADD     A,A
+                LD      E,A
+                ADD     A,A
+                ADD     A,E
+                SUB     192
+                NEG
+                LD      E,A
+                LD      A,#00
+                CALL    PR_VER
+                POP     DE
+                POP     HL
+                RET
+NO_REP          LD      A,C
+                INC     A
+                ADD     A,A
+                LD      E,A
+                ADD     A,A
+                ADD     A,E
+                SUB     2
+                LD      E,A
+                LD      A,#11
+                CALL    PR_VER
+                JP      PRR_J0
+PR_VER
+                EX      AF,AF'
+                PUSH    DE
+                PUSH    BC
+                LD      A,E
+                AND     A
+                JR      Z,PRVR_EX
+                LD      B,A
+                SRL     D
+                LD      A,#F
+                JR      NC,$+3
+                CPL
+
+                LD      C,A
+                LD      A,L
+                OR      D
+                LD      L,A
+                EX      AF,AF'
+                LD      D,A
+                LD      A,(HL)
+                XOR     D
+                AND     C
+                XOR     D
+                LD      (HL),A
+                CALL    _DW_LINE
+                DJNZ    $-8
+PRVR_EX         POP     BC
+                POP     DE
+                RET
+AROFF
+                PUSH    BC
+                XOR     A
+                LD      (ARROW),A
+                CALL    _ARR_CLEAR
+                POP     BC
+                RET
+ARON
+                PUSH    BC
+                CALL    _ARR_INIT
+                LD      A,255
+                LD      (ARROW),A
+                POP     BC
+                RET
+PR_MEN
+                LD      H,0
+                LD      L,H
+                PUSH    HL
+                POP     IX
+                PUSH    HL
+                LD      BC,#20C0
+                CALL    _PRINT_SPR
+                POP     HL
+                LD      DE,#1518
+                LD      A,(COLOR_SND)
+                LD      C,A
+                CALL    _ATTR
+                LD      HL,#1501
+                LD      DE,#0B18
+                LD      A,(COLOR_MENU)
+                LD      C,A
+                CALL    _ATTR
+                LD      HL,#1500
+                LD      DE,#0B01
+                LD      A,(COLOR_LINE)
+;                AND     #3f ;no brightness
+                LD      C,A
+                CALL    _ATTR
+                LD      HL,SLTAB
+                CALL    _PRINT_LIN
+                LD      HL,STTAB
+                JP      _PRINT_TXT
+
+ENVSYMBOLS      DEFW    #8181;1
+                DEFW    #8080;8
+                DEFW    #8180;9
+                DEFW    #8280;A
+                DEFW    #8380;B
+                DEFW    #8282;C
+                DEFW    #8382;D
+                DEFW    #8082;E
+                DEFW    #8181;F
+
+SLTAB        ;   DEFB    1,192,0,167
+                DEFB    0,11,95,21
+                DEFB    0,11,103,21
+                DEFB    0,11,119,21
+;                DEFB    0,11,127,21
+                DEFB    0,11,143,21
+;                DEFB    0,11,151,21
+                DEFB    0,11,167,21
+                DEFB    0,11,175,21
+                DEFB    0,11,183,21
+;                DEFB    0,11,191,21
+                DEFB    255
+STTAB           
+                DEFB    22,25, "OCTAVE",0
+                DEFB    22,33, "MOD.OCT",0
+                DEFB    22,41, "MODE",0
+                DEFB    21,57, "ENVELOPE:",0
+                DEFB    21,65, "VOLUME  :",0
+                DEFB    21,73, "SAMPLE  :",0
+                DEFB    21,81, "ORNAMENT:",0
+                DEFB    23,97, "PLAY",0
+                DEFB    23,113,"REPEAT",0
+                DEFB    24,137,"CLEAR",0
+                DEFB    21,145,"SAMPL ORNAM",0
+                DEFB    22,161,"CLIPBOARD",0
+                DEFB    21,169,"SMP-GET-ORN",0
+                DEFB    21,177,"SMP-PUT-ORN",0
+                DEFB    255
+FTAB            DEFB    8,9
+                DEFW    GO_NOBIT
+                DEFB    64,13
+                DEFW    GO_NOSCAL
+                DEFB    8,0
+                DEFW    0
+                DEFB    8,9
+                DEFW    GO_TNBIT
+                DEFB    32,13
+                DEFW    GO_TNSCAL
+                DEFB    4,0
+                DEFW    0
+                DEFB    16,13
+                DEFW    GO_SMNUM
+                DEFB    4,5
+                DEFW    GO_SMREP
+                DEFB    4,0
+                DEFW    0
+                DEFB    12,13
+                DEFW    GO_ORNUM
+                DEFB    4,5
+                DEFW    GO_ORREP
+                DEFB    4,0
+                DEFW    0
+                DEFB    5
+                DEFW    GO_CONTR
+CONTR_TAB       DEFW    CDEC_OCT,CINC_OCT
+                DEFW    CDEC_MOCT,CINC_MOCT
+                DEFW    CDEC_DEL,CINC_DEL
+                DEFW    CDEC_MOV,CINC_MOV
+                DEFW    ED_STR
+                DEFW    CINV_MODE
+                DEFW    PL_BUT
+                DEFW    CL_SMP
+                DEFW    CL_ORN
+                DEFW    GT_SMP
+                DEFW    GT_ORN
+                DEFW    PT_SMP
+                DEFW    PT_ORN
+
+SBTAB           DEFB    176,24,72,7
+                DEFB    176,32,72,7
+                DEFB    168,120,40,7
+                DEFB    216,120,40,7
+                DEFB    176,0,72,135
+                DEFB    176,40,72,7
+                DEFB    168,96,88,7
+                DEFB    168,144,40,7
+                DEFB    216,144,40,7
+                DEFB    168,168,24,7
+                DEFB    232,168,24,7
+                DEFB    168,176,24,7
+                DEFB    232,176,24,7
+                DEFB    255
+
+SURTX           DEFB    "SURE Y/N"
+REPTX           DEFB    "DEL: VL:  "
+ONOFFTX         DEFB    "ON OFF"

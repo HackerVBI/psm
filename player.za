@@ -1,0 +1,747 @@
+                ORG     30000
+
+MUSIC           EQU     49152
+LN              EQU     END-STA
+
+STA             LD      HL,MUSIC
+;		JP	INIT
+		CALL	INIT
+STTA		halt
+		CALL	LEL
+		JR	STTA
+LEL
+                LD	HL,0
+                LD	DE,0
+                LD	BC,#0200
+                LDIR
+
+                LD	HL,#5800
+                LD	DE,#5802
+                LD	BC,#20*4-2
+                SET	6,(HL)
+                LDIR
+
+                ld 	hl,pl_vars
+                ld	de,#4000
+                ld	bc,chl
+                ldir
+                ld	de,#4020
+                ld	bc,chl
+                ldir
+                ld	de,#4040
+                ld	bc,chl
+                ldir
+
+                LD      A,4             ;
+                OUT     (254),A         ;
+
+FINISH          LD      A,255
+                AND     A
+                RET     Z
+
+DEL_O1          LD      A,1
+                DEC     A
+                JR	NZ,PL_NOINIT
+PL_INITA
+                LD      A,7             ;
+                OUT     (254),A         ;
+PL_INIT_J1	LD      IX,CHL*2+PL_VARS
+                CALL	PL_INIT
+                AND	A
+                JP	NZ,PL_INITT
+                LD      IX,CHL*1+PL_VARS
+                CALL	PL_INIT
+                LD      IX,CHL*0+PL_VARS
+                CALL	PL_INIT
+
+DEL		LD	A,0
+PL_NOINIT
+                LD      (DEL_O1+1),A
+
+                XOR     A
+                EXX
+                LD	E,A
+                EXX
+
+                ld	a,2
+                OUT     (254),A         ;
+                ex	af,af'
+                LD      IX,PL_VARS 
+		CALL	PLA_LL ;channel A
+		ex	af,af'
+		RRCA
+		RRCA
+		EXX
+		OR	E
+		LD	E,A
+		EXX
+                ld	a,1
+                OUT     (254),A         ;
+                ex	af,af'
+                LD      IX,PL_VARS+CHL
+		CALL	PLA_LL ;channel B
+		ex	af,af'
+		RRCA
+		RRCA
+		RRCA
+		EXX
+		OR	E
+		LD	E,A
+		EXX
+		ld	a,3
+                OUT     (254),A         ;
+                xor	a
+		ex	af,af'
+                LD      IX,PL_VARS+CHL+CHL
+		CALL	PLA_LL ;channel C
+		ex	af,af'
+		RRCA
+		RRCA
+		RRCA
+		RRCA
+		EXX
+		OR	E
+		EXX
+		LD	(AY_REG+7),A ;store mix
+
+		ld	a,4
+                OUT     (254),A         ;
+PLAY_AY
+		LD	HL,AY_REG
+		LD	DE,#4070
+		LD	BC,16
+		LDIR
+
+		LD	HL,AY_REG
+		LD	A,6
+		LD	DE,#FF00
+		LD	C,#FD
+PLAY_L1		LD	B,D
+		OUT	(C),E
+		LD	B,#BF
+		OUTI
+		INC	E
+		LD	B,D
+		OUT	(C),E
+		LD	B,#BF
+		OUTI
+		INC	E
+		DEC	A
+		JP	NZ,PLAY_L1
+		LD	B,D
+		OUT	(C),E
+		LD	B,#BF
+		OUTI
+		INC	E
+                OUT     (254),A          ;
+		OR	(HL)
+		RET	Z
+		LD	(HL),0
+		LD	B,D
+		OUT	(C),E
+		LD	B,#BF
+		OUT	(C),A
+		RET
+
+PL_INITT        CALL	POSITION
+		JP	PL_INIT_J1
+
+POSITION
+		LD	HL,0
+POSITION2
+                LD      A,(HL)
+                LD	B,A
+                INC	HL
+                INC     A
+                JR      NZ,POS_J0
+
+                LD      A,(HL)
+                CP      255
+                JR      NZ,POS_LOOP
+                XOR     A
+                LD      (FINISH+1),A
+                JP	AY_INIT
+
+POS_LOOP	LD	HL,0
+                JR      POSITION2
+POS_J0
+                LD      A,(HL)
+                INC	HL
+	        LD      (POSITION+1),HL
+
+                ADD     A,48
+                LD      (F_NOTE+1),A
+                LD      A,B
+                ADD     A,A
+                ADD     A,A
+                ADD     A,A
+                SUB     B
+                LD      E,A
+                LD	D,0
+                DEC	DE
+PATADR          LD      HL,0
+                ADD     HL,DE
+
+                LD	(OLD_SP0+1),SP
+                LD	SP,HL
+STA4            LD      DE,0
+                POP	AF
+                LD      (DEL+1),A
+                POP	HL
+                ADD	HL,DE
+                LD	(PL_VARS+R_ADDR),HL
+                POP	HL
+                ADD	HL,DE
+                LD	(PL_VARS+R_ADDR+CHL),HL
+                POP	HL
+                ADD	HL,DE
+                LD	(PL_VARS+R_ADDR+CHL+CHL),HL
+OLD_SP0		LD	SP,0
+
+		XOR	A
+		LD	(PL_VARS+R_RET_CNT),A
+		LD	(PL_VARS+R_RET_CNT+CHL),A
+		LD	(PL_VARS+R_RET_CNT+CHL+CHL),A
+		INC	A
+		LD	(PL_VARS+R_PAUSE_CNT),A
+		LD	(PL_VARS+R_PAUSE_CNT+CHL),A
+		LD	(PL_VARS+R_PAUSE_CNT+CHL+CHL),A
+		LD	E,#80
+		LD	A,(PL_VARS+R_NOTE)
+		OR	E
+		LD	(PL_VARS+R_NOTE),A
+		LD	A,(PL_VARS+R_NOTE+CHL)
+		OR	E
+		LD	(PL_VARS+R_NOTE+CHL),A
+		LD	A,(PL_VARS+R_NOTE+CHL+CHL)
+		OR	E
+		LD	(PL_VARS+R_NOTE+CHL+CHL),A
+		RET
+
+PLA_LL          LD      E,(IX+R_ORN)
+ANOP            LD      D,0
+
+ORNADR          LD      HL,0 ;ornaments table address
+                ADD     HL,DE
+                ADD     HL,DE
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+STA2            LD      HL,0
+                ADD     HL,DE
+                PUSH    HL
+
+                LD      E,(IX+R_ORN_TICK)
+                LD      D,0
+                INC     HL
+                INC     HL
+                LD      A,E
+                AND     #60
+                LD      A,E
+                JR      Z,PLA_JJ01
+                LD      HL,ANOP+1 ;empty ornament
+                XOR     A
+PLA_JJ01
+                AND     31
+                LD      E,A
+                ADD     HL,DE
+                LD      A,(IX+R_NOTE)
+                AND	127
+                ADD     A,(HL)
+                CP      96
+                JR      C,PLA_JJ00
+                AND     128
+                LD      A,95
+                JR      Z,PLA_JJ00
+                XOR     A
+PLA_JJ00
+                ADD     A,A
+                LD      E,A
+                LD      HL,TABDIV
+                ADD     HL,DE
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+
+                LD      C,(IX+R_SAMP)
+                LD      B,0
+SAMPADR         LD      HL,0 ;samples table address
+                ADD     HL,BC
+                ADD     HL,BC
+                LD      C,(HL)
+                INC     HL
+                LD      B,(HL)
+STA3            LD      HL,0
+                ADD     HL,BC
+
+                PUSH    HL
+                PUSH    DE
+                LD      A,(IX+R_SMP_TICK)
+                LD      D,0
+                INC     HL
+                INC     HL
+                LD      E,A
+                ADD     A,A
+                ADD     A,E
+                LD      E,A
+                ADD     HL,DE
+                LD      C,(HL)
+                INC     HL
+                LD      B,(HL)
+                INC     HL
+                LD      E,(HL)
+                LD      A,B
+                AND     7
+                BIT     2,B
+                JR      Z,PLA_JJ0
+                OR      #F8
+PLA_JJ0
+                LD      D,A
+                LD      L,(IX+R_DIV_SHIFT)
+                LD      H,(IX+R_DIV_SHIFT+1)
+                ADD     HL,DE ;accumulating "divisor shift"
+                LD      (IX+R_DIV_SHIFT),L
+                LD      (IX+R_DIV_SHIFT+1),H
+                POP     DE
+                ADD     HL,DE
+                LD      A,H
+                CP      16
+                JR      C,PLA_JJ1
+                AND     128
+                LD      HL,4095
+                JR      Z,PLA_JJ1
+                LD      HL,0
+PLA_JJ1
+                PUSH    HL
+                LD      A,C
+                AND     15
+                BIT     6,(IX+R_ORN_TICK)
+                JR      Z,PLA_JJ2
+                OR      16
+PLA_JJ2
+                ADD     A,(IX+R_VOL_CNT)
+                SUB     15
+                JR      C,PLA_JJ3A
+                BIT     7,(IX+R_SMP_TICK)
+                JR      Z,PLA_JJ3
+
+PLA_JJ3A        XOR     A
+
+PLA_JJ3         LD      D,A
+                LD      HL,AY_REG+6
+                LD      A,C
+                AND     #90
+                BIT     7,(IX+R_SMP_TICK)
+                JR      Z,PLA_JJ4
+                OR      #80
+PLA_JJ4
+                LD      E,A
+                AND     #80
+                JR      NZ,PLA_J1
+                LD      A,D
+                AND     A
+                JR      Z,PLA_J1
+                LD      A,B
+                AND     #F8
+                RRCA
+                RRCA
+                RRCA
+                LD      (HL),A ;put noise
+
+PLA_J1
+		LD	B,E ; store mix mask
+                LD      A,D
+		INC	HL
+		INC	HL
+		EX	AF,AF'
+		LD	E,A
+		LD	A,B ; store mix mask in af'
+		LD	D,0
+		EX	AF,AF'
+                ADD     HL,DE
+                LD      (HL),A ;put volume
+                LD      HL,AY_REG
+                ADD     HL,DE
+                ADD     HL,DE
+                POP     DE
+                LD      (HL),E ;put tone l
+                INC     HL
+                LD      (HL),D ;put tone h
+                POP     HL
+                LD      A,(IX+R_SMP_TICK)
+                LD      E,A
+                AND     31
+                LD      C,A
+                LD      B,(HL)
+                LD      A,B
+                AND     31
+                INC     C
+                CP      C
+                JR      NC,SMP_J1
+                INC     HL
+                LD      D,(HL)
+                LD      A,D
+                AND     #E0
+                LD      A,D
+                JR      NZ,PLA_J2
+                SET     7,E
+                JR      SMP_J1
+PLA_J2
+                AND     31
+                LD      C,A
+                DEC     (IX+R_LOOP_CNT)
+                JR      NZ,SMP_J1
+                LD      A,D
+                RLCA
+                RLCA
+                RLCA
+                AND     7
+                LD      (IX+R_LOOP_CNT),A
+                LD      A,B
+                RLCA
+                RLCA
+                AND     3
+                LD      D,A
+                BIT     5,B
+                LD      A,(IX+R_VOL_CNT)
+                JR      Z,PLA_J3
+                INC     D
+                SUB     D
+                JR      NC,SMP_J0
+                XOR     A
+                JR      SMP_J0
+PLA_J3
+                ADD     A,D
+                CP      16
+                JR      C,SMP_J0
+                LD      A,15
+SMP_J0
+                LD      (IX+R_VOL_CNT),A
+SMP_J1          LD      A,C
+                XOR     E
+                AND     31
+                XOR     E
+                LD      (IX+R_SMP_TICK),A
+                POP     HL
+                LD      A,(IX+R_ORN_TICK)
+                LD      E,A
+                AND     31
+                CP      (HL)
+                INC     A
+                JR      C,SMP_J2
+                INC     HL
+                LD      A,(HL)
+                AND     A
+                JP      M,SMP_J2
+                SET     5,E
+SMP_J2
+                XOR     E
+                AND     31
+                XOR     E
+                LD      (IX+R_ORN_TICK),A
+		RET
+;                XOR	A;
+;                LD	(AY_REG+9),a;
+;                LD	(AY_REG+10),a;
+
+
+PL_INIT ;UFO
+                XOR	A
+                DEC     (IX+R_PAUSE_CNT)
+                RET	NZ
+                LD      A,(IX+R_PAUSE)
+                LD      (IX+R_PAUSE_CNT),A
+
+                LD      L,(IX+R_ADDR)
+                LD      H,(IX+R_ADDR+1)
+PLI_DM          
+		LD	A,(IX+R_RET_CNT) ;check if it gosub block
+		AND	A
+		JR	Z,PLI_DMJ1 ; 0 = no gosub
+		DEC	A	; 1 = return, 2= 1 operator left
+		JR	NZ,PLI_DMJ2
+
+		LD	L,(IX+R_RET_ADDR)
+		LD	H,(IX+R_RET_ADDR+1)
+
+PLI_DMJ2	LD	(IX+R_RET_CNT),A
+PLI_DMJ1	LD      A,(HL)
+                INC     HL
+                CP      #60 
+                JP      C,PLI_NOT ;note
+                JR      Z,PLI_R ;note reset
+                CP      #70
+                JR      C,PLI_SMP ;change sample
+                CP      #90
+                JR      C,PLI_ORN ;change ornament
+                JR      Z,PLI_NTA ;no note (extra pause)
+                CP      #A0
+                JR      C,PLI_VOL ;change volume
+                JR      Z,PLI_NOR ;no ornament
+                CP      #B1
+                JR      C,PLI_SPM ;change env.mod (modulatable)
+                CP      #B8
+                JP      C,PLI_TDV ;change envelope
+                CP      #F9
+                JR      C,PLI_PAS ;change pause
+                JR      Z,PLI_GSB ;reference
+                CP      #FC
+                JR      C,PLI_DII ;env
+                RET
+PLI_NTA
+		LD	(IX+R_ADDR),L
+		LD	(IX+R_ADDR+1),H
+		XOR	A
+                RET
+;UFO
+PLI_R           SET     7,(IX+R_SMP_TICK)
+                JP      PLI_NTA
+
+PLI_SMP         SUB     #61
+                LD      (IX+R_SAMP),A
+                JP	PLI_DMJ1
+
+PLI_ORN         SUB     #70
+                LD      (IX+R_ORN),A
+                LD      (IX+R_ORN_TICK),0
+                JP	PLI_DMJ1
+
+PLI_VOL         SUB     #90
+                LD      (IX+R_VOL),A
+                JP	PLI_DMJ1
+
+PLI_NOR         LD      (IX+R_ORN_TICK),A ;#A0
+		JP	PLI_DMJ1
+
+PLI_PAS         SUB     #B7
+                LD      (IX+0),A
+                LD      (IX+1),A
+                JP	PLI_DMJ1
+PLI_GSB
+		LD	C,(HL)
+		INC	HL
+		LD	B,(HL)
+		INC	HL
+		LD	A,(HL)
+		INC	HL
+		LD	(IX+R_RET_CNT),A
+		LD	(IX+R_RET_ADDR),L
+		LD	(IX+R_RET_ADDR+1),H
+		LD	L,C
+		LD	H,B
+                JP	PLI_DMJ1
+PLI_DII
+                SUB     #FA-32
+                LD      (IX+R_ORN),A
+                JP	PLI_DMJ1
+
+PLI_SPM         LD      (IX+R_ORN),33
+                LD      (IX+R_ENV_TYPE),A
+                SET     6,(IX+R_ORN_TICK)
+                JP	PLI_DMJ1
+
+PLI_TDV         LD      (IX+R_ENV_TYPE),A
+                LD      B,(HL)
+                INC     HL
+                LD      (IX+R_ENV_DIV),B
+PLI_TDV2
+                SUB     #B1-8
+                LD      (AY_REG+13),A
+                LD      A,B
+                CP      #F1
+                JR      C,PLI_TDV2_J1
+                AND     15
+                LD      B,A
+                XOR     A
+                JR      PLI_TDV2_J2
+PLI_TDV2_J1
+                LD      B,0
+PLI_TDV2_J2
+                LD      (AY_REG+11),A
+                LD      A,B
+                LD      (AY_REG+12),A
+                SET     6,(IX+R_ORN_TICK)
+                JP	PLI_DMJ1
+PLI_NOT
+                LD      B,A
+                LD      A,(IX+R_NOTE)
+                BIT     7,A
+                JR      Z,PLI_J1
+F_NOTE          LD      A,0
+PLI_J1          SUB     B
+                JR      NC,PLI_J2
+                ADD     A,96
+
+PLI_J2          LD      (IX+R_NOTE),A
+
+                LD      A,(IX+R_VOL)
+                LD      (IX+R_VOL_CNT),A
+                XOR     A
+                LD      (IX+R_SMP_TICK),A
+                LD      (IX+R_DIV_SHIFT),A
+                LD      (IX+R_DIV_SHIFT+1),A
+                LD      (IX+R_LOOP_CNT),1
+
+                LD      A,(IX+R_ORN_TICK)
+                AND     #E0
+                BIT     7,A
+                JR      NZ,PLI_J3
+                AND     #C0
+PLI_J3          LD      (IX+R_ORN_TICK),A
+                AND     #40
+                JP	Z,PLI_NTA
+                LD      A,(IX+R_ORN)
+                CP      33
+                JP	C,PLI_NTA
+
+                LD      B,(IX+R_ENV_DIV)
+                LD      A,(IX+R_ENV_TYPE)
+                CP      #B1
+                JR      C,PLI_NOT_L1
+
+                SUB     #B1-8
+                LD      (AY_REG+13),A
+                JP	PLI_NTA
+PLI_NOT_L1
+                SUB     #A1
+                LD      C,A
+                AND     3
+                ADD     A,A
+                OR      8
+                LD      (AY_REG+13),A
+                LD      A,C
+                AND     12
+                LD      C,A
+                ADD     A,A
+                ADD     A,C
+                ADD     A,(IX+R_NOTE)
+                CP      48
+                JR      C,PLI_J4
+                SUB     48
+                CP      48
+                JR      C,PLI_J4
+                SUB     48
+PLI_J4
+                ADD     A,A
+                LD      E,A
+                LD      D,0
+                PUSH    HL
+                LD      HL,TABDIV+96
+                ADD     HL,DE
+                LD      A,(HL)
+                POP     HL
+                LD      (AY_REG+11),A
+                XOR     A
+                LD      (AY_REG+12),A
+                JP	PLI_NTA
+INIT
+      
+                LD	(STA2+1),HL
+                LD	(STA3+1),HL
+                LD	(STA4+1),HL
+                LD      C,L
+                LD      B,H
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+                INC     HL
+                EX      DE,HL
+                ADD     HL,BC
+                PUSH	HL
+                EX      DE,HL
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+                INC     HL
+                EX      DE,HL
+                ADD     HL,BC
+                LD      (SAMPADR+1),HL
+                EX      DE,HL
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+                INC     HL
+                EX      DE,HL
+                ADD     HL,BC
+                LD      (ORNADR+1),HL
+                EX      DE,HL
+                LD      E,(HL)
+                INC     HL
+                LD      D,(HL)
+                INC     HL
+                EX      DE,HL
+                ADD     HL,BC
+                LD      (PATADR+1),HL
+                EX      DE,HL
+                LD	A,255
+                LD      (FINISH+1),A
+                POP	HL
+                PUSH	HL
+;                LD      (POSITION+1),HL
+                LD	B,100
+INIT_L1
+                LD	A,(HL)
+                INC	HL
+                INC	A
+                JR	Z,INIT_J1
+                INC	HL
+                DJNZ	INIT_L1
+                XOR	A
+                JR	INIT_J2
+INIT_J1
+		LD	A,(HL)
+		INC	A 
+		JR	Z,INIT_J2 ; if 255 (no cycle)
+		DEC	A
+		ADD	A,A
+INIT_J2		LD	E,A
+		LD	D,0
+		POP	HL
+		PUSH	HL
+		ADD	HL,DE
+                LD      (POS_LOOP+1),HL
+                POP	HL
+                CALL    POSITION2 ; init first position
+                LD	A,(DEL+1)
+		LD      (DEL_O1+1),A
+AY_INIT
+                LD      HL,AY_REG+8
+                XOR     A
+                LD      (HL),A
+                INC     HL
+                LD      (HL),A
+                INC     HL
+                LD      (HL),A
+                JP      PLAY_AY
+
+R_PAUSE_CNT	EQU	0; delay counter
+R_PAUSE		EQU	1; delay
+R_ADDR		EQU	2; current address
+R_NOTE		EQU	4; current note
+R_SAMP		EQU	5; current sample
+R_SMP_TICK	EQU	6; sample tick (7bit=ended)
+R_ORN		EQU	7; current ornament
+R_ORN_TICK	EQU	8; ornament tick (5bit=ended; 6bit=env; 7bit=no ornament)
+R_VOL_CNT	EQU	9; volume counter
+R_VOL		EQU	10; current volume
+R_DIV_SHIFT	EQU	11; tone shift
+R_LOOP_CNT	EQU	13; loop delay counter
+R_ENV_TYPE	EQU	14; current env type
+R_ENV_DIV	EQU	15; current env devisor
+R_RET_CNT	EQU	16; return counter
+R_RET_ADDR	EQU	17; return address
+R_FLAGS		EQU	19; flags (7bit = before note)
+CHL         EQU 20; size
+
+AY_REG          DEFS    14
+PL_VARS         DEFS    CHL*3
+TABDIV          DEFW    #D3D,#C7F,#BCB,#B22,#A82,#9EB,#95D,#8D6,#857,#7DF,#76E,#703
+                DEFW    #69F,#63F,#5E6,#591,#541,#4F6,#4AE,#46B,#42C,#3F0,#3B7,#382
+                DEFW    #34F,#320,#2F3,#2C8,#2A1,#27B,#257,#236,#216,#1F8,#1DC,#1C1
+                DEFW    #1A8,#190,#179,#164,#150,#13D,#12C,#11B,#10B,#0FC,#0EE,#0E0
+                DEFW    #0D4,#0C8,#0BD,#0B2,#0A8,#09F,#096,#08D,#085,#07E,#077,#070
+                DEFW    #06A,#064,#05E,#059,#054,#04F,#04B,#047,#043,#03F,#03B,#038
+                DEFW    #035,#032,#02F,#02D,#02A,#028,#025,#023,#021,#01F,#01E,#01C
+                DEFW    #01A,#019,#018,#016,#015,#014,#013,#012,#011,#010,#00F,#00E
+END
+         

@@ -1,0 +1,792 @@
+		ORG     28000
+
+COMP_PAG        EQU     #16
+
+C_PAT           EQU     23296
+C_SAMP          EQU     23296+32
+C_ORN           EQU     23296+32+15
+
+TABDIV          EQU     TABDIV_
+MUSIC           EQU     #C000
+;MUSDAT          EQU     #B400
+POSIT           EQU     MUSDAT
+PATDAT          EQU     MUSDAT+200
+REMARK          EQU     MUSDAT+2822
+LOOP            EQU     MUSDAT+2950
+_LENGTH         EQU     _END-_START
+_START
+                DI
+                LD      (OVERFLOW+1),SP
+                LD      BC,#7FFD
+                LD      A,COMP_PAG
+                OUT     (C),A
+                LD      DE,REMARK
+                LD      HL,MUSIC+8
+                LD      BC,#8000
+
+                LD      (HL),'p'
+                INC     HL
+                LD      (HL),'s'
+                INC     HL
+                LD      (HL),'m'
+                INC     HL
+                LD      (HL),'1'
+                INC     HL
+                LD      (HL),0
+                INC     HL
+
+REM_L0          LD      A,(DE)   
+                CP      32
+                JR      NC,REM_L1
+                INC     DE
+                DJNZ    REM_L0
+
+                JR      REM_J4
+REM_L1          LD      A,(DE)
+                CP      32
+                JR      NZ,REM_J1
+                BIT     0,C
+                SET     0,C
+                JR      Z,REM_J3
+                INC     DE
+                JR      REM_J2
+REM_J1          RES     0,C
+REM_J3          LD      (HL),A
+                INC     DE
+                INC     HL
+REM_J2          DJNZ    REM_L1
+                DEC     HL
+                LD      A,(HL)
+                CP      32
+                JR      Z,REM_J4
+                INC     HL
+REM_J4
+                PUSH    HL
+                LD      DE,65536-MUSIC
+                ADD     HL,DE
+                LD      (MUSIC+0),HL ;store position list address
+                AND     A
+                LD      HL,C_PAT
+                LD      B,32+15+32
+
+                LD      (HL),255
+                INC     HL
+                DJNZ    $-3
+                POP     HL
+
+                PUSH    HL
+                LD      IX,C_PAT
+                LD      DE,POSIT
+                LD      A,(LOOP)
+                LD      B,100
+                SUB     B
+                NEG
+                LD      C,A
+                LD      (POS_J1+1),A
+
+POS_L1          LD      A,(DE)
+                INC     DE
+                CP      255
+                JR      Z,POS_J1
+                LD      (POS_OR+2),A
+
+POS_OR          LD      (IX+0),0
+
+                LD      (HL),A
+                INC     HL
+                LD      A,(DE)
+                LD      (HL),A
+                INC     HL
+                JR      POS_J0
+
+POS_J1          LD      A,0
+                CP      B
+                JR      NC,POS_J0
+                INC     C ;Shift Loop position while removing empty
+POS_J0
+                INC     DE
+                DJNZ    POS_L1
+
+                LD      (HL),255
+                INC     HL
+                LD      A,(LOOP)
+                CP      255
+                JR      Z,POS_J2
+                LD      A,100
+                SUB     C
+POS_J2          LD      (HL),A
+                EX      DE,HL
+
+                POP     HL
+                PUSH    DE
+                CP      255
+                JR      Z,POS_J3
+                ADD     A,A
+                LD      C,A
+                ADD     HL,BC
+                LD      A,(HL)
+                INC     A
+                JR      NZ,POS_J3
+                INC     HL ;If we have Loop pointing beyond positions
+                LD      (HL),A
+POS_J3          POP     HL
+                INC     HL
+
+                PUSH    HL
+
+                LD      DE,65536-MUSIC
+                ADD     HL,DE
+                LD      (MUSIC+2),HL ;store sample list address
+
+                LD      HL,C_PAT
+                LD      BC,#2000
+                CALL    POS_TRANS ;Renumber patterns map
+                LD      A,C
+                LD      (PAT_QUAN+1),A
+
+                LD      HL,(MUSIC+0)
+                LD      DE,MUSIC
+                ADD     HL,DE
+
+POS_CL2         LD      A,(HL)
+                CP      255
+                JR      Z,POS_CJ1
+                LD      (POS_OR1+2),A
+POS_OR1         LD      A,(IX+0)
+                LD      (HL),A ;Renumber patterns in position table
+                INC     HL
+                INC     HL
+                JR      POS_CL2
+POS_CJ1
+                LD      HL,C_PAT
+                LD      B,32
+
+                LD      A,(HL)
+                INC     A
+                CALL    NZ,PAT_ANAL ;collect sample/ornament table
+                INC     L
+                DJNZ    $-6
+
+                LD      BC,#7FFD
+                LD      A,COMP_PAG
+                OUT     (C),A ;while collecting page could be changed
+
+                LD      HL,C_SAMP
+                LD      BC,#0F00
+                CALL    POS_TRANS ;Renumber sample map
+
+                LD      A,C ;number of samples
+                ADD     A,A
+                POP     HL
+                PUSH    HL
+                POP     IX
+                LD      E,A
+                LD      D,0
+                ADD     HL,DE ;find address of NEW samples
+                LD      DE,C_SAMP
+                LD      B,15
+
+                LD      A,(DE)
+                INC     A
+                CALL    NZ,SAMP_MOV ;copy used samples
+                INC     E
+                DJNZ    $-6
+
+                PUSH    HL
+                LD      DE,65536-MUSIC
+                ADD     HL,DE
+                LD      (MUSIC+4),HL ;store ornament list address
+
+                LD      HL,C_ORN
+                LD      BC,#2000
+                CALL    POS_TRANS ;Renumber ornaments map
+
+                LD      A,C ;number of ornaments
+                ADD     A,A
+                POP     HL
+                PUSH    HL
+                POP     IX
+                LD      E,A
+                LD      D,0
+                ADD     HL,DE ;find address of NEW ornaments
+                LD      DE,C_ORN
+                LD      B,32
+
+                LD      A,(DE)
+                INC     A
+                CALL    NZ,ORN_MOV ;copy used ornaments
+                INC     E
+                DJNZ    $-6
+
+                PUSH    HL
+                LD      (PTH2_HL+1),HL ;initialize pattern table stream (addr)
+                LD      DE,65536-MUSIC
+                ADD     HL,DE
+                LD      (MUSIC+6),HL ;store pattern list address
+
+                LD      A,COMP_PAG ;initialize compile output stream (page)
+                LD      (PTH_P1+1),A
+
+PAT_QUAN        LD      A,0
+                LD      B,A
+                ADD     A,A
+                ADD     A,A
+                ADD     A,A
+                SUB     B
+                LD      E,A ;mul 7 / > 36 patterns => overflow
+                LD      D,0
+                POP     HL
+                ADD     HL,DE
+
+                LD      (PTH_HL+1),HL ;initialize compile output stream (addr) - skip pattern table
+
+                LD      HL,C_PAT
+                LD      B,32
+
+                LD      A,(HL)
+                INC     A
+                CALL    NZ,PAT_COMP ;compile used patterns
+                INC     L
+                DJNZ    $-6
+FIN
+                CALL    PUT_HL_LN 
+                LD	B,H
+                LD	C,L  ;return compiled stream size
+                EI
+                RET
+
+;Compile pattern
+;L = pattern number
+PAT_COMP
+                LD      E,L
+                LD      A,L
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                AND     1
+                OR      16 ;get source patterns page
+                LD      (PTH_P2+1),A ;store it
+                LD      (PTH2_P2+1),A
+
+                PUSH    BC
+                PUSH    HL
+                LD      B,E
+                LD      C,0
+                CALL    _F_PATADX
+                LD      E,B
+                LD      D,0
+                LD      HL,PATDAT
+                ADD     HL,DE
+                ADD     HL,DE
+                LD      A,(HL)
+                LD      (PTC_L1-1),A ;pattern length
+
+                INC     HL
+                LD      A,(HL)
+                CALL	PUT2_HL ;store delay
+
+                LD      B,3 ;channels
+PTC_LL          PUSH    BC
+                PUSH    IX
+                LD      HL,COPVAR
+                LD      DE,LIN_CNT
+                LD      BC,9
+                LDIR    ;Initialize channel variables
+
+                CALL    PUT_HL_LN ;find current stream pointer
+                PUSH    HL ;store it
+
+                LD      B,0 ;pattern length
+PTC_L1          PUSH    BC
+                CALL    COMP_NOTE
+                POP     BC
+                LD      DE,12
+                ADD     IX,DE ;next line in same channel
+                LD      HL,LIN_CNT
+                INC     (HL)   ;next note line
+                DJNZ    PTC_L1 
+
+                POP     HL
+                LD      A,L
+                CALL    PUT2_HL
+                LD      A,H
+                CALL    PUT2_HL ;store track address
+
+		
+                POP     IX
+                LD      A,255
+                CALL    PUT_HL ;put END_OF_TRACK
+                LD      E,4
+                ADD     IX,DE ;next channel
+                POP     BC
+                DJNZ    PTC_LL
+                POP     HL
+                POP     BC
+                RET
+COMP_NOTE
+                LD      A,(IX)
+                AND     A
+                JP      Z,NO_NOTE
+
+                CALL    SERCH_NX
+                LD      A,(IX)
+
+                LD      C,A
+                LD      D,0
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                AND     15
+                CP      15
+                JP      Z,NOTE_R
+                LD      E,A
+                LD      HL,NOTTAB-1
+                ADD     HL,DE
+                LD      A,(HL)
+                BIT     3,C
+                JR      Z,$+3
+                INC     A
+                LD      (NOT_NT+1),A
+                LD      B,A
+                LD      A,C
+                AND     7
+                ADD     A,A
+                ADD     A,A
+                LD      C,A
+                ADD     A,A
+                ADD     A,C
+                ADD     A,B
+                LD      (AA_NOT+1),A
+
+                LD      HL,VOLUME
+                LD      A,(IX+1)
+                AND     A
+                JR      Z,NO_VOL
+                CP      (HL)
+                JR      Z,NO_VOL
+                LD      (HL),A
+                ADD     A,#90
+                CALL    PUT_HL
+NO_VOL
+                INC     HL
+                LD      A,(IX+2)
+                LD      C,A
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                AND     15
+                JR      Z,NO_SMP
+                ADD     A,31
+                LD      E,A
+                LD      D,#5B
+                LD      A,(DE)
+                CP      (HL)
+                JR      Z,NO_SMP
+                LD      (HL),A
+                ADD     A,#61
+                CALL    PUT_HL
+NO_SMP
+                INC     HL
+                LD      A,C
+                AND     15
+                JP      Z,NO_TYP
+                CP      8
+                JR      C,NO_ORN
+                CP      15
+                JR      C,MOD_
+                LD      A,(IX+3)
+                AND     31
+                ADD     A,32+15
+                LD      E,A
+                LD      D,#5B
+                LD      A,(DE)
+                CP      (HL)
+                JP      Z,AA_NOT
+                LD      (HL),A
+                ADD     A,#70
+AA_ORN          CALL    PUT_HL
+                XOR     A
+                LD      (TYPE),A
+                JP      AA_NOT
+NO_ORN          LD      A,(HL)
+                CP      32
+                JP      Z,AA_NOT
+                LD      (HL),32
+                LD      A,#A0
+                JP      AA_ORN
+MOD_      ;UFO
+                AND     1
+                LD      A,(IX+3)
+                JR      NZ,MOD_NOP
+                LD      B,A
+NOT_NT          LD      A,0
+                ADD     A,A
+                LD      E,A
+                LD      D,0
+                LD      HL,TABDIV+168
+                ADD     HL,DE
+                LD      DE,0-24
+                LD      A,B
+                LD      B,4
+MOD_L1
+                CP      (HL)
+                JR      Z,MOD_J1
+                ADD     HL,DE
+                DJNZ    MOD_L1
+                JR      MOD_NOP
+MOD_J1
+                LD      A,(IX+0)
+                SUB     B
+                CPL
+                AND     3
+                RLCA
+                RLCA
+                LD      B,A
+                LD      A,(IX+2)
+                RRCA
+                AND     3
+                OR      B
+                ADD     A,#A1
+                LD      B,A
+                LD      A,(ORNAM)
+                CP      34
+                JR      NZ,MOD_SP
+                LD      A,(TYPE)
+                CP      B
+                JR      Z,DMNP_NO
+MOD_SP
+                LD      A,34
+                LD      (ORNAM),A
+                LD      A,B
+                LD      (TYPE),A
+                JR      AA_NOT-3
+MOD_NOP
+                LD      C,A
+                LD      A,(IX+2)
+                AND     15
+                LD      B,A
+                LD      A,(ORNAM)
+                CP      33
+                JR      NZ,DMNP_YS
+                LD      A,(TYPE)
+                CP      B
+                JR      NZ,DMNP_YS
+                LD      A,(DIVIS)
+                CP      C
+                JR      NZ,DMNP_YS
+DMNP_NO
+                LD      A,#FB
+                LD      HL,DIV_INIT
+                CP      (HL)
+                JR      Z,AA_NOT
+                LD      (HL),A
+                CALL    PUT_HL
+                JR      AA_NOT
+DMNP_YS
+                LD      A,33
+                LD      (ORNAM),A
+                LD      A,B
+                LD      (TYPE),A
+                ADD     A,#B1-8
+                CALL    PUT_HL
+                LD      A,C
+                LD      (DIVIS),A
+                CALL    PUT_HL
+
+AA_NOT          LD      B,0
+                LD      HL,NOTE
+                LD      A,(HL)
+                SUB     B
+                JR      NC,AA_NOT_J1
+                ADD     A,96
+AA_NOT_J1       LD      (HL),B
+                JP      PUT_HL
+
+NO_NOTE         LD      A,(LIN_CNT)
+                AND     A
+                RET     NZ
+                CALL    SERCH_NX
+                LD      A,#90
+                JP      PUT_HL
+NOTE_R
+                LD      A,#60
+                JP      PUT_HL
+NO_TYP
+                LD      A,(ORNAM)
+                CP      33
+                JR      C,AA_NOT
+                CP      35
+                JR      NC,AA_NOT
+                LD      A,#FA
+                LD      HL,DIV_INIT
+                CP      (HL)
+                JR      Z,AA_NOT
+                LD      (HL),A
+                CALL    PUT_HL
+                JR      AA_NOT
+
+SERCH_NX        PUSH    IX
+                POP     HL
+                LD      A,(LIN_CNT)
+                LD      C,A
+                LD      A,(PTC_L1-1)
+                SUB     C
+                LD      C,0
+                DEC     A
+                JR      Z,SNX_J1
+                LD      B,A
+                LD      DE,12
+SNX_L1
+                ADD     HL,DE
+                LD      A,(HL)
+                AND     A
+                JR      NZ,SNX_J1
+                INC     C
+                DJNZ    SNX_L1
+
+SNX_J1          LD      A,C
+                LD      HL,PAUSE
+                CP      (HL)
+                RET     Z
+                LD      (HL),A
+                ADD     A,#B8
+                JP      PUT_HL
+
+SAMP_MOV
+                PUSH    BC
+                PUSH    DE
+                PUSH    HL
+                LD      BC,65536-#C000
+                ADD     HL,BC
+                LD      (IX),L
+                INC     IX
+                LD      (IX),H
+                INC     IX
+                LD      A,E
+                SUB     #1F
+                CALL    _F_SAMPAD
+                LD      A,(DE)
+                AND     #1F
+                INC     A
+                LD      B,A
+                ADD     A,A
+                ADD     A,B
+                LD      C,A
+                LD      B,0
+                INC     C
+                INC     C
+                POP     HL
+                EX      DE,HL
+                LDIR
+                EX      DE,HL
+                POP     DE
+                POP     BC
+                RET
+ORN_MOV
+                PUSH    BC
+                PUSH    DE
+                PUSH    HL
+                LD      BC,65536-#C000
+                ADD     HL,BC
+                LD      (IX),L
+                INC     IX
+                LD      (IX),H
+                INC     IX
+                LD      A,E
+                SUB     #20+#0F
+                CALL    _F_ORNAD
+                LD      A,(DE)
+                AND     #1F
+                INC     A
+                LD      C,A
+                LD      B,0
+                INC     C
+                INC     C
+                POP     HL
+                EX      DE,HL
+                LDIR
+                EX      DE,HL
+                POP     DE
+                POP     BC
+                RET
+
+
+;Analyze pattern (mark sample/ornament)
+;L = pattern number
+PAT_ANAL
+                LD      E,L
+                PUSH    BC
+                PUSH    HL
+                LD      B,E
+                LD      C,0
+                CALL    _F_PATADX
+                LD      E,B
+                LD      D,0
+                LD      HL,PATDAT
+                ADD     HL,DE
+                ADD     HL,DE
+                LD      A,(HL)
+                LD      B,A
+                ADD     A,A
+                ADD     A,B
+                LD      B,A ;B = pattern len * 3
+                LD      E,4 ;DE = channel step
+PTA_L1          LD      A,(IX+0)
+                AND     A
+                JR      Z,PTA_NXN
+                AND     #80
+                JR      NZ,PTA_NXN
+                LD      A,(IX+2) ;sample number & type
+                LD      C,A
+                RRCA
+                RRCA
+                RRCA
+                RRCA
+                AND     #0F
+                JR      Z,PTA_OR
+                LD      HL,C_SAMP-1
+                ADD     A,L
+                LD      L,A
+                LD      (HL),D ;mark sample as used
+PTA_OR
+                LD      A,C
+                OR      #F0
+                INC     A
+                JR      NZ,PTA_NXN
+                LD      A,(IX+3) ;if ornament
+                AND     #1F
+                LD      HL,C_ORN
+                ADD     A,L
+                LD      L,A
+                LD      (HL),D ;mark ornament as used
+PTA_NXN
+                ADD     IX,DE
+                DJNZ    PTA_L1
+
+                POP     HL
+                POP     BC
+                RET
+; Renumber
+; HL = table address (0=need to be renumbed)
+; B = number of elements
+; C = start first number
+POS_TRANS
+                LD      A,(HL)
+                AND     A
+                JR      NZ,POS_TRANS_J1
+                LD      (HL),C
+                INC     C
+POS_TRANS_J1
+                INC     HL
+                DJNZ    POS_TRANS
+                RET
+
+
+
+; Puts A into (#C000-FFFF, 6-7 pages)
+; With automatic incrementation of address and page
+; If overflowed (over #8000) - emergency exit
+PUT_HL
+                PUSH    BC
+                PUSH    AF
+PTH_P1          LD      A,COMP_PAG
+                LD      BC,#7FFD
+                OUT     (C),A
+                POP     AF
+                PUSH    HL
+PTH_HL          LD      HL,#C000
+                LD      (HL),A
+                INC     HL
+                LD      A,H
+                AND     A
+                LD      A,(PTH_P1+1)
+                JR      NZ,PTH_J1
+                LD      H,#C0
+                INC     A
+                CP      #18
+                JR      Z,OVERFLOW
+                LD      (PTH_P1+1),A
+PTH_J1          LD      (PTH_HL+1),HL
+PTH_P2          LD      A,0
+                OUT     (C),A
+                POP     HL
+                POP     BC
+                RET
+;Output stream length
+;HL = length (0-32767)
+PUT_HL_LN
+                PUSH    BC
+                LD      HL,(PTH_HL+1)
+              	LD      BC,#C000
+              	AND     A
+              	SBC     HL,BC
+              	LD      A,(PTH_P1+1)
+              	SUB     COMP_PAG
+              	AND     1
+              	RRCA
+              	RRCA
+              	RRCA
+              	RRCA
+              	OR      H
+              	LD      H,A
+              	POP     BC
+              	RET
+
+; Puts A into (#C000-FFFF, 6 page)
+; With automatic incrementation of address
+; If overflowed (over #4000) - emergency exit
+PUT2_HL
+                PUSH    BC
+                PUSH    AF
+				LD      A,COMP_PAG
+                LD      BC,#7FFD
+                OUT     (C),A
+                POP     AF
+                PUSH    HL
+PTH2_HL         LD      HL,#C000
+                LD      (HL),A
+                INC     HL
+                LD      A,H
+                AND     A
+                JR      Z,OVERFLOW
+PTH2_J1         LD      (PTH2_HL+1),HL
+PTH2_P2         LD      A,0
+                OUT     (C),A
+                POP     HL
+                POP     BC
+                RET
+
+; Emergency exit procedure
+; Restoring SP and finalization
+OVERFLOW        LD      SP,0
+                LD      B,5
+                PUSH    BC
+                CALL    _TAM
+                POP     BC
+                JP      FIN
+
+
+NOTTAB          DEFB    9,11,0,2,4,5,7
+
+COPVAR          DEFB    0,255,255,255,255,0,0,0,48
+
+LIN_CNT         DEFB    0
+PAUSE           DEFB    255
+VOLUME          DEFB    255
+SAMPLE          DEFB    255
+ORNAM           DEFB    255
+TYPE            DEFB    0
+DIVIS           DEFB    0
+DIV_INIT        DEFB    0
+NOTE            DEFB    48
+
+_END
+print "comp size=",_LENGTH
+__START
+				INCLUDE 'BIOS.ZA'
+__END
+__LENGTH        EQU __END-__START
+print "bios size=",__LENGTH
