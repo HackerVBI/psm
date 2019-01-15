@@ -1,10 +1,9 @@
 # psm
 Professional Sound Maker
-ZX spectrum sound (chiptune) editor  for AY 8912 chip
 
+ZX spectrum sound (chiptune) editor for AY / YM chip
 
-A little help from creator, Volutar D: (in russian)
-
+<img src=https://i.ytimg.com/vi/IzDvxsVHIdA/hqdefault.jpg >
 
 Pro SOUND MAKER Documentation v1.1
 Author: Dratov Denis aka Dexus (c) 1994-2019
