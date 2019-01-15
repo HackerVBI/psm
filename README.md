@@ -1,7 +1,7 @@
 # psm
 Professional Sound Maker
 
-A little help from creator, Voluntar D: (in russian)
+A little help from creator, Volutar D: (in russian)
 
 
 Pro SOUND MAKER Documentation v1.1
