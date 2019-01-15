@@ -1,5 +1,7 @@
 # psm
 Professional Sound Maker
+ZX spectrum sound (chiptune) editor  for AY 8912 chip
+
 
 A little help from creator, Volutar D: (in russian)
 
